@@ -4,6 +4,13 @@ An AI assistant that combines modern language models with file management capabi
 
 ## Features
 
+### Secure Workspace Sandbox System
+- **Isolated File Operations**: All file management happens within a secure `WorkspaceAI/workspace/` folder
+- **Easy File Exchange**: Give files to the assistant by placing them in the workspace folder, get results by checking the same location
+- **Complete File Control**: The assistant can create, read, write, copy, move, and organize files within its sandbox
+- **Safety First**: Path traversal protection ensures the assistant cannot access files outside its designated workspace
+- **Cross-Platform**: Works consistently on Windows and Linux with proper file handling
+
 ### Rolling Memory System
 - 2 Recent Conversations: Full context preserved
 - 8 Summarized Conversations: AI-compressed history
