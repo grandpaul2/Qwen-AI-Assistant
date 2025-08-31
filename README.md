@@ -1,6 +1,6 @@
-# 🤖 Qwen Assistant with File Management v2.1
+# 🤖 Qwen Assistant with File Management v2.2 (Cross-Platform)
 
-A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management capabilities and persistent memory - **all in a single file!**
+A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management capabilities and persistent memory - **works on Windows and Linux!**
 
 ## ✨ Features
 
@@ -23,9 +23,11 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 - **Method Selection**: Auto-detect best installation method
 
 ### 🛡️ **Enhanced Reliability & Security**
+- **Cross-Platform Support**: Works on Windows and Linux with platform-specific optimizations
+- **Smart Package Detection**: Auto-detects available package managers (apt, dnf, pacman, etc.)
 - **Network Resilience**: Automatic retry logic with exponential backoff
 - **Comprehensive Logging**: Detailed logs saved to QwenAssistant/qwen_assistant.log
-- **Input Validation**: Filename sanitization and path traversal protection
+- **Input Validation**: Platform-aware filename sanitization and path traversal protection
 - **Error Recovery**: Graceful failure handling with informative messages
 - **Configuration Backup**: Automatic config backups before changes
 - **Memory Safety**: Atomic file operations for conversation persistence
@@ -42,14 +44,16 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 
 ## 🚀 Quick Start
 
-### 1. **Setup Ollama**
+### **Windows Setup**
+
+#### 1. **Setup Ollama**
 ```bash
 # Install Ollama from https://ollama.ai/download
 ollama pull qwen2.5:3b
 ollama serve
 ```
 
-### 2. **Install Dependencies**
+#### 2. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
@@ -58,10 +62,42 @@ Or manually install:
 pip install requests tqdm
 ```
 
-### **3. Start Assistant**
+#### 3. **Start Assistant**
 ```bash
 python qwen_assistant.py
 ```
+
+### **Linux Setup**
+
+#### 1. **Quick Install (Recommended)**
+```bash
+chmod +x install_linux.sh
+./install_linux.sh
+```
+
+#### 2. **Manual Setup**
+```bash
+# Install Python and pip (if not already installed)
+sudo apt update && sudo apt install python3 python3-pip  # Ubuntu/Debian
+# OR
+sudo dnf install python3 python3-pip  # Fedora
+# OR  
+sudo pacman -S python python-pip      # Arch Linux
+
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama serve
+ollama pull qwen2.5:3b
+```
+
+#### 3. **Start Assistant**
+```bash
+python3 qwen_assistant.py
+```
+
 *Starts directly in chat mode - no menu system. Auto-creates QwenAssistant folder with outputs, memory, and config on first run*
 
 ## 📂 Directory Structure
@@ -69,6 +105,7 @@ python qwen_assistant.py
 [wherever you put the file]/
 ├── qwen_assistant.py          # EVERYTHING in one file!
 ├── requirements.txt           # Dependencies list for easy setup
+├── install_linux.sh           # Linux installation script
 └── QwenAssistant/            # Auto-created on first run
     ├── outputs/              # File operations base directory
     ├── memory/               # Persistent conversation memory
@@ -159,28 +196,29 @@ ollama serve                 # Start Ollama service (if needed)
 "Copy notes.txt to archive.txt"
 ```
 
-## 📦 Software Installation Generator
+## 📦 Cross-Platform Software Installation
 
 ### **Supported Software:**
-- **Development:** Python, Git, VS Code, Node.js, Notepad++
+- **Development:** Python, Git, VS Code, Node.js, Notepad++ (Windows)
 - **Browsers:** Chrome, Firefox
-- **Utilities:** 7zip, VLC Media Player
+- **Utilities:** 7zip/p7zip, VLC Media Player
 - **Communication:** Discord
 - **AI/ML Tools:** Open WebUI, Ollama
 
 ### **Installation Methods:**
-- **Winget** (Windows Package Manager) - Recommended
-- **Pip** (Python packages)
-- **Direct Download** (Official websites with links)
-- **Docker** (Where applicable)
+- **Windows:** Winget (Package Manager), Direct Download
+- **Linux:** apt, dnf, yum, pacman, zypper, snap, Direct Download
+- **Universal:** Pip (Python packages), Docker (Where applicable)
 
 ### **Example Usage:**
 ```
 "Generate install commands for Python"
-"How do I install Git using winget?"
-"Give me Docker commands for Open WebUI"
-"Install commands for VS Code"
+"How do I install Git on Linux?"
+"Give me apt commands for VS Code"
+"Install commands for Discord"
 ```
+
+*The assistant automatically detects your platform and suggests the best installation method!*
 
 ## � Usage Examples
 
@@ -251,11 +289,12 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 ## 🎯 Single File Benefits
 
 - ✅ **Easy Deployment**: Just copy one file anywhere
+- ✅ **Cross-Platform**: Works on Windows and Linux
 - ✅ **Auto-Setup**: Creates folders and config automatically
-- ✅ **Portable**: Works on any Windows machine with Python + Ollama
+- ✅ **Smart Package Detection**: Auto-detects Linux package managers
 - ✅ **Dependency Management**: Simple requirements.txt for easy setup
 - ✅ **Robust Error Handling**: Comprehensive logging and recovery
-- ✅ **Security Built-in**: Input validation and path protection
+- ✅ **Security Built-in**: Platform-aware input validation and path protection
 - ✅ **User-Friendly**: Startup menu and configuration options
 - ✅ **Easier Updates**: Modify one file to change everything
 - ✅ **Simpler Backup**: Just backup qwen_assistant.py and QwenAssistant folder
@@ -274,6 +313,7 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 
 ## 📈 Version History
 
+- **v2.2**: Cross-platform support (Windows/Linux), smart package manager detection, platform-aware validation
 - **v2.1.1**: Enhanced error handling, logging system, security improvements, dependency management
 - **v2.1**: Configuration system, portable design, startup menu, auto-folder creation
 - **v2.0**: Rolling memory system, software installation database

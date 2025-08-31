@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Qwen with Rolling Memory + Supreme File Management
+Qwen with Rolling Memory + Supreme File Management (Cross-Platform)
 Enhanced chat with persistent memory across sessions
 
-Version: 2.1
+Version: 2.2
 Author: Grandpaul
 Updated: August 30, 2025
-Features: Rolling memory, file management, software installation commands
+Features: Rolling memory, file management, software installation commands, Windows/Linux support
 """
 
 import json
@@ -14,6 +14,7 @@ import requests
 import sys
 import os
 import time
+import platform
 from datetime import datetime
 import threading
 import shutil
@@ -236,17 +237,22 @@ class FileManager:
         if not filename or not filename.strip():
             raise ValueError("Filename cannot be empty")
         
-        # Check for invalid characters
-        invalid_chars = '<>:"|?*'
-        if any(char in filename for char in invalid_chars):
-            raise ValueError(f"Filename contains invalid characters: {invalid_chars}")
+        # Check for invalid characters (platform-specific)
+        if platform.system() == "Windows":
+            invalid_chars = '<>:"|?*'
+            if any(char in filename for char in invalid_chars):
+                raise ValueError(f"Filename contains invalid characters: {invalid_chars}")
+            
+            # Check for reserved names on Windows
+            reserved_names = ['CON', 'PRN', 'AUX', 'NUL'] + [f'COM{i}' for i in range(1, 10)] + [f'LPT{i}' for i in range(1, 10)]
+            if filename.upper().split('.')[0] in reserved_names:
+                raise ValueError(f"Filename '{filename}' is reserved and cannot be used on Windows")
+        else:
+            # Linux/Unix - only null character is forbidden
+            if '\0' in filename:
+                raise ValueError("Filename cannot contain null character")
         
-        # Check for reserved names on Windows
-        reserved_names = ['CON', 'PRN', 'AUX', 'NUL'] + [f'COM{i}' for i in range(1, 10)] + [f'LPT{i}' for i in range(1, 10)]
-        if filename.upper().split('.')[0] in reserved_names:
-            raise ValueError(f"Filename '{filename}' is reserved and cannot be used")
-        
-        # Check length
+        # Check length (common to all platforms)
         if len(filename) > 255:
             raise ValueError("Filename too long (max 255 characters)")
 
@@ -668,6 +674,32 @@ class MemoryManager:
 # Global memory manager
 memory = MemoryManager()
 
+def detect_linux_package_manager():
+    """Detect the available package manager on Linux systems"""
+    if platform.system() != "Linux":
+        return None
+    
+    # Check for package managers in order of preference
+    managers = [
+        ("apt", "apt --version"),
+        ("dnf", "dnf --version"), 
+        ("yum", "yum --version"),
+        ("pacman", "pacman --version"),
+        ("zypper", "zypper --version"),
+        ("snap", "snap --version")
+    ]
+    
+    for manager, command in managers:
+        try:
+            # Try to run the version command to see if manager exists
+            result = os.system(f"{command} >/dev/null 2>&1")
+            if result == 0:  # Command succeeded
+                return manager
+        except:
+            continue
+    
+    return "unknown"
+
 def show_progress(description, duration=2):
     """Show progress bar for operations"""
     with tqdm(total=100, desc=description, ncols=70, bar_format='{desc}: {percentage:3.0f}%|{bar}|') as pbar:
@@ -834,12 +866,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "generate_install_commands",
-                "description": "Generate installation commands for popular software",
+                "description": "Generate cross-platform installation commands for popular software (Windows/Linux)",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "software": {"type": "string", "description": "Software name (e.g., 'python', 'git', 'vscode', 'nodejs')"},
-                        "method": {"type": "string", "description": "Installation method: 'winget', 'pip', 'npm', 'auto' (default)"}
+                        "method": {"type": "string", "description": "Installation method: 'winget' (Windows), 'apt'/'dnf'/'pacman' (Linux), 'pip', 'docker', 'auto' (default)"}
                     },
                     "required": ["software"]
                 }
@@ -1076,72 +1108,169 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         print(f"Error processing response: {e}")
 
 def generate_install_commands(software, method="auto"):
-    """Generate installation commands for popular software"""
+    """Generate installation commands for popular software (cross-platform)"""
     
     software = software.lower().strip()
     method = method.lower().strip()
+    current_os = platform.system()
     
-    # Software database with multiple installation methods
+    # Cross-platform software database
     software_db = {
         "python": {
-            "winget": "winget install Python.Python.3.12",
-            "direct": "Download from: https://python.org/downloads/\n- Choose 'Add to PATH' during installation",
-            "description": "Python programming language"
+            "description": "Python programming language",
+            "windows": {
+                "winget": "winget install Python.Python.3.12",
+                "direct": "Download from: https://python.org/downloads/\n- Choose 'Add to PATH' during installation"
+            },
+            "linux": {
+                "apt": "sudo apt update && sudo apt install python3 python3-pip",
+                "dnf": "sudo dnf install python3 python3-pip",
+                "yum": "sudo yum install python3 python3-pip", 
+                "pacman": "sudo pacman -S python python-pip",
+                "zypper": "sudo zypper install python3 python3-pip",
+                "snap": "sudo snap install python3 --classic",
+                "direct": "Download from: https://python.org/downloads/"
+            }
         },
         "git": {
-            "winget": "winget install Git.Git",
-            "direct": "Download from: https://git-scm.com/downloads",
-            "description": "Version control system"
+            "description": "Version control system",
+            "windows": {
+                "winget": "winget install Git.Git",
+                "direct": "Download from: https://git-scm.com/downloads"
+            },
+            "linux": {
+                "apt": "sudo apt update && sudo apt install git",
+                "dnf": "sudo dnf install git",
+                "yum": "sudo yum install git",
+                "pacman": "sudo pacman -S git",
+                "zypper": "sudo zypper install git",
+                "snap": "sudo snap install git --classic",
+                "direct": "sudo apt install git  # or use your distro's package manager"
+            }
         },
         "vscode": {
-            "winget": "winget install Microsoft.VisualStudioCode",
-            "direct": "Download from: https://code.visualstudio.com/download",
-            "description": "Code editor"
+            "description": "Code editor",
+            "windows": {
+                "winget": "winget install Microsoft.VisualStudioCode",
+                "direct": "Download from: https://code.visualstudio.com/download"
+            },
+            "linux": {
+                "apt": "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg\nsudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/\nsudo sh -c 'echo \"deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main\" > /etc/apt/sources.list.d/vscode.list'\nsudo apt update && sudo apt install code",
+                "dnf": "sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc\nsudo sh -c 'echo -e \"[code]\\nname=Visual Studio Code\\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\\nenabled=1\\ngpgcheck=1\\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc\" > /etc/yum.repos.d/vscode.repo'\nsudo dnf install code",
+                "snap": "sudo snap install code --classic",
+                "direct": "Download .deb/.rpm from: https://code.visualstudio.com/download"
+            }
         },
         "nodejs": {
-            "winget": "winget install OpenJS.NodeJS",
-            "direct": "Download from: https://nodejs.org/en/download/",
-            "description": "JavaScript runtime"
+            "description": "JavaScript runtime",
+            "windows": {
+                "winget": "winget install OpenJS.NodeJS",
+                "direct": "Download from: https://nodejs.org/en/download/"
+            },
+            "linux": {
+                "apt": "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -\nsudo apt-get install -y nodejs",
+                "dnf": "sudo dnf install nodejs npm",
+                "yum": "sudo yum install nodejs npm",
+                "pacman": "sudo pacman -S nodejs npm",
+                "zypper": "sudo zypper install nodejs npm",
+                "snap": "sudo snap install node --classic",
+                "direct": "Download from: https://nodejs.org/en/download/"
+            }
         },
         "chrome": {
-            "winget": "winget install Google.Chrome",
-            "direct": "Download from: https://chrome.google.com/",
-            "description": "Web browser"
+            "description": "Web browser",
+            "windows": {
+                "winget": "winget install Google.Chrome",
+                "direct": "Download from: https://chrome.google.com/"
+            },
+            "linux": {
+                "apt": "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -\nsudo sh -c 'echo \"deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main\" >> /etc/apt/sources.list.d/google-chrome.list'\nsudo apt update && sudo apt install google-chrome-stable",
+                "dnf": "sudo dnf install fedora-workstation-repositories\nsudo dnf config-manager --set-enabled google-chrome\nsudo dnf install google-chrome-stable",
+                "yum": "sudo yum install google-chrome-stable",
+                "direct": "Download .deb/.rpm from: https://chrome.google.com/"
+            }
         },
         "firefox": {
-            "winget": "winget install Mozilla.Firefox",
-            "direct": "Download from: https://firefox.com/",
-            "description": "Web browser"
-        },
-        "7zip": {
-            "winget": "winget install 7zip.7zip",
-            "direct": "Download from: https://7-zip.org/",
-            "description": "File archiver"
+            "description": "Web browser", 
+            "windows": {
+                "winget": "winget install Mozilla.Firefox",
+                "direct": "Download from: https://firefox.com/"
+            },
+            "linux": {
+                "apt": "sudo apt update && sudo apt install firefox",
+                "dnf": "sudo dnf install firefox",
+                "yum": "sudo yum install firefox",
+                "pacman": "sudo pacman -S firefox",
+                "zypper": "sudo zypper install firefox",
+                "snap": "sudo snap install firefox",
+                "direct": "sudo apt install firefox  # Usually pre-installed on most distros"
+            }
         },
         "discord": {
-            "winget": "winget install Discord.Discord",
-            "direct": "Download from: https://discord.com/download",
-            "description": "Communication platform"
+            "description": "Communication platform",
+            "windows": {
+                "winget": "winget install Discord.Discord",
+                "direct": "Download from: https://discord.com/download"
+            },
+            "linux": {
+                "apt": "wget -O discord.deb \"https://discordapp.com/api/download?platform=linux&format=deb\"\nsudo dpkg -i discord.deb\nsudo apt-get install -f",
+                "snap": "sudo snap install discord",
+                "direct": "Download .deb/.tar.gz from: https://discord.com/download"
+            }
         },
         "vlc": {
-            "winget": "winget install VideoLAN.VLC",
-            "direct": "Download from: https://videolan.org/vlc/",
-            "description": "Media player"
+            "description": "Media player",
+            "windows": {
+                "winget": "winget install VideoLAN.VLC",
+                "direct": "Download from: https://videolan.org/vlc/"
+            },
+            "linux": {
+                "apt": "sudo apt update && sudo apt install vlc",
+                "dnf": "sudo dnf install vlc",
+                "yum": "sudo yum install vlc",
+                "pacman": "sudo pacman -S vlc",
+                "zypper": "sudo zypper install vlc",
+                "snap": "sudo snap install vlc",
+                "direct": "sudo apt install vlc  # Available in most distro repos"
+            }
         },
-        "notepad++": {
-            "winget": "winget install Notepad++.Notepad++",
-            "direct": "Download from: https://notepad-plus-plus.org/downloads/",
-            "description": "Text editor"
+        "7zip": {
+            "description": "File archiver",
+            "windows": {
+                "winget": "winget install 7zip.7zip",
+                "direct": "Download from: https://7-zip.org/"
+            },
+            "linux": {
+                "apt": "sudo apt update && sudo apt install p7zip-full",
+                "dnf": "sudo dnf install p7zip p7zip-plugins",
+                "yum": "sudo yum install p7zip p7zip-plugins",
+                "pacman": "sudo pacman -S p7zip",
+                "zypper": "sudo zypper install p7zip",
+                "direct": "sudo apt install p7zip-full  # Cross-platform 7zip"
+            }
         },
         "open-webui": {
-            "pip": "pip install open-webui\n# Then run with: open-webui serve",
-            "docker": "docker run -d --name open-webui -p 3000:8080 ghcr.io/open-webui/open-webui:main",
-            "direct": "Download from: https://github.com/open-webui/open-webui",
-            "description": "Web UI for LLMs"
+            "description": "Web UI for LLMs",
+            "windows": {
+                "pip": "pip install open-webui\n# Then run with: open-webui serve",
+                "docker": "docker run -d --name open-webui -p 3000:8080 ghcr.io/open-webui/open-webui:main",
+                "direct": "Download from: https://github.com/open-webui/open-webui"
+            },
+            "linux": {
+                "pip": "pip install open-webui\n# Then run with: open-webui serve",
+                "docker": "docker run -d --name open-webui -p 3000:8080 ghcr.io/open-webui/open-webui:main",
+                "direct": "pip install open-webui  # Recommended method"
+            }
         },
         "ollama": {
-            "direct": "Download from: https://ollama.ai/download\n# After install: ollama run llama2",
-            "description": "Run LLMs locally"
+            "description": "Run LLMs locally",
+            "windows": {
+                "direct": "Download from: https://ollama.ai/download\n# After install: ollama run llama2"
+            },
+            "linux": {
+                "curl": "curl -fsSL https://ollama.ai/install.sh | sh",
+                "direct": "curl -fsSL https://ollama.ai/install.sh | sh\n# After install: ollama run llama2"
+            }
         }
     }
     
@@ -1159,41 +1288,78 @@ def generate_install_commands(software, method="auto"):
         return f"Software '{software}' not found in database.{suggestion_text}\n\nAvailable software: {', '.join(list(software_db.keys())[:10])}..."
     
     sw = software_db[found_software]
-    result = f"\n📦 {sw['description']} ({found_software})\n" + "="*50 + "\n"
+    os_key = current_os.lower()
+    
+    # Get platform-specific commands
+    if os_key not in sw:
+        return f"Software '{found_software}' is not supported on {current_os}"
+    
+    platform_commands = sw[os_key]
+    result = f"\n📦 {sw['description']} ({found_software}) - {current_os}\n" + "="*60 + "\n"
     
     if method == "auto":
-        # Determine best method automatically
-        if "winget" in sw:
-            result += f"🚀 RECOMMENDED (Windows Package Manager):\n{sw['winget']}\n\n"
+        # Determine best method automatically based on platform
+        if current_os == "Windows":
+            if "winget" in platform_commands:
+                result += f"🚀 RECOMMENDED (Windows Package Manager):\n{platform_commands['winget']}\n\n"
+            if "direct" in platform_commands:
+                result += f"🌐 Direct Download:\n{platform_commands['direct']}\n\n"
         
-        if "pip" in sw:
-            result += f"🐍 PIP Install:\n{sw['pip']}\n\n"
-        
-        if "direct" in sw:
-            result += f"🌐 Direct Download:\n{sw['direct']}\n\n"
+        elif current_os == "Linux":
+            # Detect package manager and recommend it
+            detected_pm = detect_linux_package_manager()
+            if detected_pm and detected_pm in platform_commands:
+                result += f"🚀 RECOMMENDED ({detected_pm.upper()}):\n{platform_commands[detected_pm]}\n\n"
             
-        if "docker" in sw:
-            result += f"🐳 Docker:\n{sw['docker']}\n\n"
+            # Show other available methods
+            for pm_name, command in platform_commands.items():
+                if pm_name != detected_pm and pm_name != "direct":
+                    result += f"📋 {pm_name.upper()}:\n{command}\n\n"
+            
+            if "direct" in platform_commands:
+                result += f"🌐 Alternative:\n{platform_commands['direct']}\n\n"
+        
+        # Show pip/docker if available
+        if "pip" in platform_commands:
+            result += f"🐍 PIP Install:\n{platform_commands['pip']}\n\n"
+        if "docker" in platform_commands:
+            result += f"🐳 Docker:\n{platform_commands['docker']}\n\n"
     
-    elif method in sw:
-        result += f"📋 {method.upper()} Install:\n{sw[method]}\n"
+    elif method in platform_commands:
+        result += f"📋 {method.upper()} Install:\n{platform_commands[method]}\n"
     else:
-        available = list(sw.keys())
-        available.remove("description")
-        result += f"Method '{method}' not available.\nAvailable methods: {', '.join(available)}\n"
-        result += f"🚀 Default method:\n{sw.get('winget', sw.get('direct', 'No installation method available'))}"
+        available = list(platform_commands.keys())
+        available.remove("description") if "description" in available else None
+        result += f"Method '{method}' not available for {current_os}.\nAvailable methods: {', '.join(available)}\n"
+        # Show default method
+        if current_os == "Windows" and "winget" in platform_commands:
+            result += f"🚀 Default method:\n{platform_commands['winget']}"
+        elif current_os == "Linux":
+            detected_pm = detect_linux_package_manager()
+            if detected_pm in platform_commands:
+                result += f"🚀 Default method:\n{platform_commands[detected_pm]}"
     
-    result += "\n💡 TIP: Run commands in PowerShell as Administrator if needed"
+    if current_os == "Windows":
+        result += "\n💡 TIP: Run commands in PowerShell as Administrator if needed"
+    else:
+        result += "\n💡 TIP: You may need sudo privileges for system package installation"
+    
     return result
 
 def interactive_mode():
     """Interactive chat mode with rolling memory"""
     print("\n" + "="*70)
-    print("QWEN 2.5 ASSISTANT with File Management v2.1")
+    print("QWEN 2.5 ASSISTANT with File Management v2.2 (Cross-Platform)")
     print("="*70)
+    print(f"Platform: {platform.system()} {platform.release()}")
     print(f"Base path: {file_manager.base_path}")
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
+    
+    # Show detected package manager on Linux
+    if platform.system() == "Linux":
+        detected_pm = detect_linux_package_manager()
+        print(f"Package manager: {detected_pm if detected_pm else 'Not detected'}")
     
     # Show log file location
     log_dir = os.path.dirname(APP_CONFIG["paths"]["config"])
@@ -1207,7 +1373,7 @@ def interactive_mode():
     print("- Normal questions and file operations")
     print("- 'chat: question' - force normal chat mode")
     print("- 'tools: command' - force file tools mode")
-    print("- 'install python' - software installation commands")
+    print("- 'install python' - cross-platform software installation commands")
 
     print("\nControl Commands:")
     print("- /new        Start new conversation")
