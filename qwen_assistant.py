@@ -70,9 +70,9 @@ except ImportError:
     tqdm = TqdmFallback
 
 # Setup logging (only after config is loaded)
-def setup_logging(config):
-    """Setup logging with proper file location from config"""
-    log_dir = os.path.dirname(config["paths"]["config"])
+def setup_logging():
+    """Setup logging with proper file location from hardcoded paths"""
+    log_dir = os.path.dirname(get_config_path())
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, 'qwen_assistant.log')
     logging.getLogger().handlers.clear()
@@ -92,16 +92,22 @@ def get_script_directory():
     """Get the directory where this script is located"""
     return os.path.dirname(os.path.abspath(__file__))
 
+def get_workspace_path():
+    """Get the hardcoded workspace path"""
+    return os.path.join(get_script_directory(), "QwenAssistant", "workspace")
+
+def get_memory_path():
+    """Get the hardcoded memory path"""
+    return os.path.join(get_script_directory(), "QwenAssistant", "memory")
+
+def get_config_path():
+    """Get the hardcoded config path"""
+    return os.path.join(get_script_directory(), "QwenAssistant", "config.json")
+
 def get_default_config():
     """Get default configuration settings"""
-    script_dir = get_script_directory()
     return {
         "version": CONSTANTS['VERSION'],
-        "paths": {
-            "workspace": os.path.join(script_dir, "QwenAssistant", "workspace"),
-            "memory": os.path.join(script_dir, "QwenAssistant", "memory"),
-            "config": os.path.join(script_dir, "QwenAssistant", "config.json")
-        },
         "settings": {
             "model": "qwen2.5:3b",
             "safe_mode": True,
@@ -115,8 +121,7 @@ def get_default_config():
 
 def load_config():
     """Load configuration from file or create default"""
-    script_dir = get_script_directory()
-    config_path = os.path.join(script_dir, "QwenAssistant", "config.json")
+    config_path = get_config_path()
     try:
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
@@ -143,12 +148,12 @@ def load_config():
         print(f"Error loading config: {e}")
         return get_default_config()
 
-def setup_directories(config):
+def setup_directories():
     """Create necessary directories"""
     try:
-        os.makedirs(config["paths"]["workspace"], exist_ok=True)
-        os.makedirs(config["paths"]["memory"], exist_ok=True)
-        os.makedirs(os.path.dirname(config["paths"]["config"]), exist_ok=True)
+        os.makedirs(get_workspace_path(), exist_ok=True)
+        os.makedirs(get_memory_path(), exist_ok=True)
+        os.makedirs(os.path.dirname(get_config_path()), exist_ok=True)
         return True
     except Exception as e:
         print(f"Error creating directories: {e}")
@@ -176,7 +181,7 @@ CONSTANTS = {
 
 def save_config(config):
     """Save configuration to file"""
-    config_path = config["paths"]["config"]
+    config_path = get_config_path()
     try:
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         # Validate config before saving
@@ -209,15 +214,15 @@ def save_config(config):
 
 # Global configuration
 APP_CONFIG = load_config()
-setup_directories(APP_CONFIG)
+setup_directories()
 # Setup logging after config is loaded
-logger = setup_logging(APP_CONFIG)
+logger = setup_logging()
 
 # Global configuration
 APP_CONFIG = load_config()
-setup_directories(APP_CONFIG)
+setup_directories()
 # Setup logging after config is loaded
-logger = setup_logging(APP_CONFIG)
+logger = setup_logging()
 
 # File Manager Class - Built into single file
 class FileManager:
@@ -227,7 +232,7 @@ class FileManager:
         if config is None:
             config = APP_CONFIG
         
-        self.base_path = config["paths"]["workspace"]
+        self.base_path = get_workspace_path()
         self.safe_mode = config["settings"]["safe_mode"]
         self.default_compress_format = config["settings"]["compress_format"]
         self.search_case_sensitive = config["settings"]["search_case_sensitive"]
@@ -589,7 +594,7 @@ class MemoryManager:
         if config is None:
             config = APP_CONFIG
         
-        self.memory_file = os.path.join(config["paths"]["memory"], "memory.json")
+        self.memory_file = os.path.join(get_memory_path(), "memory.json")
         self.current_conversation = []
         self.recent_conversations = []  # Last 2 full conversations
         self.summarized_conversations = []  # Next 8 summarized
@@ -1701,11 +1706,11 @@ def configure_settings():
                 print(f"Ollama host updated to: {new_host}")
         elif choice == 's':
             if save_config(config):
-                setup_directories(config)
+                setup_directories()
                 print("✅ Configuration saved successfully!")
                 APP_CONFIG = config
-                file_manager = FileManager(config)
-                memory = MemoryManager(config)
+                file_manager = FileManager()
+                memory = MemoryManager()
             else:
                 print("❌ Failed to save configuration")
             break
@@ -1722,17 +1727,17 @@ def main():
     print("🚀 Initializing Qwen Assistant...")
     
     # Ensure config is saved if this is first run
-    if not os.path.exists(APP_CONFIG["paths"]["config"]):
+    if not os.path.exists(get_config_path()):
         save_config(APP_CONFIG)
         print("✅ Created default configuration")
     
     # Reconfigure logging with proper location
-    logger = setup_logging(APP_CONFIG)
+    logger = setup_logging()
     logger.info("Qwen Assistant starting up")
     
-    # Initialize managers with current config
-    file_manager = FileManager(APP_CONFIG)
-    memory = MemoryManager(APP_CONFIG)
+    # Initialize managers
+    file_manager = FileManager()
+    memory = MemoryManager()
     
     # Test Ollama connection
     if not test_ollama_connection():
