@@ -9,4 +9,5 @@ jobs:
   echo:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Tag workflow triggered! Ref: ${{ github.ref }}"
+      - name: Echo tag info
+        run: echo "Tag workflow triggered! Ref: ${{ github.ref }}"
