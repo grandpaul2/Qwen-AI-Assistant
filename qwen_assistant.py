@@ -27,17 +27,93 @@ from typing import Optional, List, Union, Dict, Any
 
 logging.basicConfig(level=logging.INFO)
 
+# Configuration Management
+def get_script_directory():
+    """Get the directory where this script is located"""
+    return os.path.dirname(os.path.abspath(__file__))
+
+def get_default_config():
+    """Get default configuration settings"""
+    script_dir = get_script_directory()
+    return {
+        "version": "2.1",
+        "paths": {
+            "outputs": os.path.join(script_dir, "QwenAssistant", "outputs"),
+            "memory": os.path.join(script_dir, "QwenAssistant", "memory"),
+            "config": os.path.join(script_dir, "QwenAssistant", "config.json")
+        },
+        "settings": {
+            "model": "qwen2.5:3b",
+            "safe_mode": True,
+            "ollama_host": "localhost:11434",
+            "compress_format": "zip",
+            "search_case_sensitive": False,
+            "search_content": True,
+            "search_max_file_kb": 1024
+        }
+    }
+
+def load_config():
+    """Load configuration from file or create default"""
+    script_dir = get_script_directory()
+    config_path = os.path.join(script_dir, "QwenAssistant", "config.json")
+    
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                # Ensure all required keys exist (for upgrades)
+                default_config = get_default_config()
+                for key in default_config:
+                    if key not in config:
+                        config[key] = default_config[key]
+                return config
+    except Exception as e:
+        print(f"Warning: Could not load config ({e}), using defaults")
+    
+    return get_default_config()
+
+def save_config(config):
+    """Save configuration to file"""
+    config_path = config["paths"]["config"]
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False
+
+def setup_directories(config):
+    """Create necessary directories"""
+    try:
+        os.makedirs(config["paths"]["outputs"], exist_ok=True)
+        os.makedirs(config["paths"]["memory"], exist_ok=True)
+        os.makedirs(os.path.dirname(config["paths"]["config"]), exist_ok=True)
+        return True
+    except Exception as e:
+        print(f"Error creating directories: {e}")
+        return False
+
+# Global configuration
+APP_CONFIG = load_config()
+setup_directories(APP_CONFIG)
+
 # File Manager Class - Built into single file
 class FileManager:
     """File management tools integrated directly into Qwen assistant"""
     
-    def __init__(self):
-        self.base_path = "C:\\Users\\Grandpaul\\.ollama\\outputs"
-        self.safe_mode = True
-        self.default_compress_format = "zip"
-        self.search_case_sensitive = False
-        self.search_content = True
-        self.search_max_file_kb = 1024
+    def __init__(self, config=None):
+        if config is None:
+            config = APP_CONFIG
+        
+        self.base_path = config["paths"]["outputs"]
+        self.safe_mode = config["settings"]["safe_mode"]
+        self.default_compress_format = config["settings"]["compress_format"]
+        self.search_case_sensitive = config["settings"]["search_case_sensitive"]
+        self.search_content = config["settings"]["search_content"]
+        self.search_max_file_kb = config["settings"]["search_max_file_kb"]
         self.search_exclude_globs = ["*.zip", "*.tar", "*.gz", "*.png", "*.jpg", "*.pdf"]
         self.versions = defaultdict(list)
         self.tags = defaultdict(list)
@@ -275,10 +351,13 @@ class FileManager:
 
 # Initialize file manager
 file_manager = FileManager()
-MEMORY_FILE = r'C:\Users\Grandpaul\.ollama\memory\memory.json'
 
 class MemoryManager:
-    def __init__(self):
+    def __init__(self, config=None):
+        if config is None:
+            config = APP_CONFIG
+        
+        self.memory_file = os.path.join(config["paths"]["memory"], "memory.json")
         self.current_conversation = []
         self.recent_conversations = []  # Last 2 full conversations
         self.summarized_conversations = []  # Next 8 summarized
@@ -286,9 +365,9 @@ class MemoryManager:
     
     def load_memory(self):
         """Load persistent memory from file"""
-        if os.path.exists(MEMORY_FILE):
+        if os.path.exists(self.memory_file):
             try:
-                with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
+                with open(self.memory_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 self.current_conversation = data.get('current_conversation', [])
                 self.recent_conversations = data.get('recent_conversations', [])
@@ -303,14 +382,14 @@ class MemoryManager:
     def save_memory(self):
         """Save memory to file after each response"""
         try:
-            os.makedirs(os.path.dirname(MEMORY_FILE), exist_ok=True)
+            os.makedirs(os.path.dirname(self.memory_file), exist_ok=True)
             data = {
                 'current_conversation': self.current_conversation,
                 'recent_conversations': self.recent_conversations,
                 'summarized_conversations': self.summarized_conversations,
                 'last_updated': datetime.now().isoformat()
             }
-            with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
+            with open(self.memory_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"⚠️ Could not save memory: {e}")
@@ -687,8 +766,11 @@ def get_all_tool_schemas():
         # File management tools ready for Qwen 2.5:3B
     ]
 
-def call_ollama_with_tools(prompt: str, model: str = "qwen2.5:3b", use_tools: bool = True):
+def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: bool = True):
     """Call Ollama with conversation memory and tools"""
+    
+    if model is None:
+        model = APP_CONFIG['settings']['model']
     
     # Add user message to memory
     memory.add_message("user", prompt)
@@ -713,7 +795,8 @@ def call_ollama_with_tools(prompt: str, model: str = "qwen2.5:3b", use_tools: bo
         progress_thread.start()
     
     # Ollama API call
-    response = requests.post("http://localhost:11434/api/chat", json=request_data)
+    host = APP_CONFIG['settings']['ollama_host']
+    response = requests.post(f"http://{host}/api/chat", json=request_data)
     
     if progress_thread:
         progress_thread.join()
@@ -961,33 +1044,121 @@ def test_ollama_connection():
                 return True
             else:
                 print("⚠️  Ollama connected but no Qwen models found!")
-                print("💡 Run: ollama pull qwen2.5:3b")
+                print(f"💡 Run: ollama pull {APP_CONFIG['settings']['model']}")
                 return False
     except Exception as e:
         print(f"❌ Ollama connection failed: {e}")
         print("💡 Make sure Ollama is running: ollama serve")
         return False
 
+def configure_settings():
+    """Configuration menu for changing settings"""
+    config = APP_CONFIG.copy()
+    
+    while True:
+        print("\n" + "="*50)
+        print("CONFIGURATION SETTINGS")
+        print("="*50)
+        print(f"[1] Output folder: {config['paths']['outputs']}")
+        print(f"[2] Memory folder: {config['paths']['memory']}")
+        print(f"[3] AI Model: {config['settings']['model']}")
+        print(f"[4] Safe mode: {'ON' if config['settings']['safe_mode'] else 'OFF'}")
+        print(f"[5] Ollama host: {config['settings']['ollama_host']}")
+        print("[S] Save and return")
+        print("[X] Return without saving")
+        print("="*50)
+        
+        choice = input("Choice: ").strip().lower()
+        
+        if choice == '1':
+            new_path = input(f"Enter new output folder [{config['paths']['outputs']}]: ").strip()
+            if new_path:
+                config['paths']['outputs'] = new_path
+                print(f"Output folder updated to: {new_path}")
+        elif choice == '2':
+            new_path = input(f"Enter new memory folder [{config['paths']['memory']}]: ").strip()
+            if new_path:
+                config['paths']['memory'] = new_path
+                print(f"Memory folder updated to: {new_path}")
+        elif choice == '3':
+            new_model = input(f"Enter AI model [{config['settings']['model']}]: ").strip()
+            if new_model:
+                config['settings']['model'] = new_model
+                print(f"Model updated to: {new_model}")
+        elif choice == '4':
+            config['settings']['safe_mode'] = not config['settings']['safe_mode']
+            print(f"Safe mode: {'ON' if config['settings']['safe_mode'] else 'OFF'}")
+        elif choice == '5':
+            new_host = input(f"Enter Ollama host [{config['settings']['ollama_host']}]: ").strip()
+            if new_host:
+                config['settings']['ollama_host'] = new_host
+                print(f"Ollama host updated to: {new_host}")
+        elif choice == 's':
+            if save_config(config):
+                setup_directories(config)
+                print("✅ Configuration saved successfully!")
+                global APP_CONFIG, file_manager, memory
+                APP_CONFIG = config
+                file_manager = FileManager(config)
+                memory = MemoryManager(config)
+            else:
+                print("❌ Failed to save configuration")
+            break
+        elif choice == 'x':
+            print("Configuration cancelled")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+def startup_menu():
+    """Main startup menu"""
+    while True:
+        print("\n" + "="*50)
+        print("QWEN AI ASSISTANT v2.1")
+        print("="*50)
+        print("[1] Start Assistant")
+        print("[2] Configure Settings")
+        print("[3] Exit")
+        print("="*50)
+        print(f"Data folder: ./QwenAssistant/")
+        print(f"Model: {APP_CONFIG['settings']['model']}")
+        print(f"Safe mode: {'ON' if APP_CONFIG['settings']['safe_mode'] else 'OFF'}")
+        print("="*50)
+        
+        choice = input("Choice: ").strip()
+        
+        if choice == '1':
+            return True  # Start assistant
+        elif choice == '2':
+            configure_settings()
+        elif choice == '3':
+            print("Goodbye!")
+            return False  # Exit
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
+
 def main():
     """Setup and start enhanced interactive mode"""
-    # Test Ollama connection first
+    global file_manager, memory
+    
+    print("🚀 Initializing Qwen Assistant...")
+    
+    # Ensure config is saved if this is first run
+    if not os.path.exists(APP_CONFIG["paths"]["config"]):
+        save_config(APP_CONFIG)
+        print("✅ Created default configuration")
+    
+    # Initialize managers with current config
+    file_manager = FileManager(APP_CONFIG)
+    memory = MemoryManager(APP_CONFIG)
+    
+    # Test Ollama connection
     if not test_ollama_connection():
         input("\nPress Enter to continue anyway or Ctrl+C to exit...")
     
-    # Install progress bar library if needed
-    try:
-        pass  # tqdm is already imported at the top
-    except ImportError:
-        print("Installing progress bar library...")
-        os.system("pip install tqdm")
-    
-    # Configure file manager
-    file_manager.base_path = "C:\\Users\\Grandpaul\\.ollama\\outputs"
-    file_manager.safe_mode = True
-    os.makedirs(file_manager.base_path, exist_ok=True)
-    
-    # Start interactive mode
-    interactive_mode()
+    # Show startup menu
+    if startup_menu():
+        interactive_mode()
 
 if __name__ == "__main__":
     main()
