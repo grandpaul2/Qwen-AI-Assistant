@@ -991,6 +991,7 @@ def interactive_mode():
     print("\nControl Commands:")
     print("- /new        Start new conversation")
     print("- /memory     Show memory status")
+    print("- /config     Configure settings")
     print("- /reset      Clear all memory")
     print("- exit        Quit")
     print("="*70)
@@ -1009,6 +1010,8 @@ def interactive_mode():
                 print(f"  Current: {len(memory.current_conversation)} messages")
                 print(f"  Recent: {len(memory.recent_conversations)} full conversations")
                 print(f"  Summarized: {len(memory.summarized_conversations)} conversations")
+            elif prompt == '/config':
+                configure_settings()
             elif prompt == '/reset':
                 memory.reset_memory()
                 memory.save_memory()
@@ -1053,6 +1056,7 @@ def test_ollama_connection():
 
 def configure_settings():
     """Configuration menu for changing settings"""
+    global APP_CONFIG, file_manager, memory
     config = APP_CONFIG.copy()
     
     while True:
@@ -1097,7 +1101,6 @@ def configure_settings():
             if save_config(config):
                 setup_directories(config)
                 print("✅ Configuration saved successfully!")
-                global APP_CONFIG, file_manager, memory
                 APP_CONFIG = config
                 file_manager = FileManager(config)
                 memory = MemoryManager(config)
@@ -1109,33 +1112,6 @@ def configure_settings():
             break
         else:
             print("Invalid choice. Please try again.")
-
-def startup_menu():
-    """Main startup menu"""
-    while True:
-        print("\n" + "="*50)
-        print("QWEN AI ASSISTANT v2.1")
-        print("="*50)
-        print("[1] Start Assistant")
-        print("[2] Configure Settings")
-        print("[3] Exit")
-        print("="*50)
-        print(f"Data folder: ./QwenAssistant/")
-        print(f"Model: {APP_CONFIG['settings']['model']}")
-        print(f"Safe mode: {'ON' if APP_CONFIG['settings']['safe_mode'] else 'OFF'}")
-        print("="*50)
-        
-        choice = input("Choice: ").strip()
-        
-        if choice == '1':
-            return True  # Start assistant
-        elif choice == '2':
-            configure_settings()
-        elif choice == '3':
-            print("Goodbye!")
-            return False  # Exit
-        else:
-            print("Invalid choice. Please enter 1, 2, or 3.")
 
 def main():
     """Setup and start enhanced interactive mode"""
@@ -1156,9 +1132,8 @@ def main():
     if not test_ollama_connection():
         input("\nPress Enter to continue anyway or Ctrl+C to exit...")
     
-    # Show startup menu
-    if startup_menu():
-        interactive_mode()
+    # Start interactive mode directly
+    interactive_mode()
 
 if __name__ == "__main__":
     main()
