@@ -1,6 +1,6 @@
 # WorkspaceAI v2.2
 
-An AI assistant that combines modern language models with file management capabilities and persistent memory. Works on Windows and Linux.
+A powerful toolkit that enhances language models with file management capabilities and persistent memory. Works on Windows and Linux.
 
 ## Features
 
