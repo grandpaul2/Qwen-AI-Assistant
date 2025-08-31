@@ -1,4 +1,4 @@
-# 🤖 Qwen Assistant with File Management v2.2 (Cross-Platform)
+# 🤖 Qwen Assistant v2.2 (Cross-Platform)
 
 A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management capabilities and persistent memory - **works on Windows and Linux!**
 
@@ -11,8 +11,9 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 - **Smart Context Building**: Automatic history injection
 
 ### 📁 **Built-in File Management**
-- **15+ File Operations**: Create, read, write, delete, copy, move
-- **Advanced Features**: Search, compression, backup, JSON handling
+- **18+ File Operations**: Create, read, write, delete, copy, move, compress
+- **Format-Specific Writing**: Dedicated .txt, .md, .json file creation
+- **Advanced Features**: Search, compression, backup, JSON handling, folder copying
 - **Safety Mode**: Prevents destructive operations
 - **Smart Path Resolution**: Configurable base directory
 
@@ -34,9 +35,10 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 
 ### 🎯 **User Experience**
 - **Auto-Detection**: Smart keyword-based tool triggering
+- **Clean Interface**: Simple, professional startup menu
 - **Progress Indicators**: Visual feedback for slow operations
-- **Command Shortcuts**: `/new`, `/memory`, `/reset`
-- **Mode Control**: Force chat vs tools with prefixes
+- **Command Shortcuts**: `/new`, `/memory`, `/tools`, `/reset`
+- **Mode Control**: Force chat vs tools with prefixes (`chat:`, `tools:`, `install:`)
 - **Enhanced Logging**: Comprehensive logging to file for debugging
 - **Error Recovery**: Automatic retry logic and graceful failure handling
 - **Security Features**: Path validation and filename sanitization
@@ -228,19 +230,22 @@ You: Create a file called notes.txt with my todo list
 You: List all files in the current directory
 You: Search for files containing 'project'
 You: Copy notes.txt to backup.txt
+You: Copy my project folder to backup-project
 You: Compress hello.txt into backup.zip
+You: Write a markdown file with my documentation
 ```
 
 ### **Software Installation**
 ```
-You: How do I install Python?
-You: Generate install commands for VS Code  
-You: What's the best way to install Git?
+You: install: Python
+You: install: VS Code
+You: install: Git
 ```
 
 ### **Memory Management**
 ```
 /memory     # Show memory statistics
+/tools      # List available file tools
 /new        # Start fresh conversation (saves current)
 /reset      # Clear all memory
 ```
@@ -249,6 +254,7 @@ You: What's the best way to install Git?
 ```
 chat: What's the weather like?           # Force normal chat
 tools: create file hello.txt            # Force file tools
+install: Discord                         # Get installation commands
 ```
 
 ## ⚙️ Configuration
@@ -304,9 +310,10 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 - Models stay loaded in VRAM until manually unloaded or system restart
 - First model load takes ~5-10 seconds, subsequent calls are instant
 - Safe mode prevents file deletions and overwrites by default
-- Auto-detection works well, but you can force modes with `chat:` or `tools:` prefixes
+- Auto-detection works well, but you can force modes with `chat:`, `tools:`, or `install:` prefixes
 - All file operations respect the configured base path with security validation
 - Progress indicators show for long operations like file searches and backups
+- Use `/tools` to see all available file management functions
 - Comprehensive logging helps with debugging (check QwenAssistant/qwen_assistant.log)
 - Network operations include automatic retry logic with exponential backoff
 - Input validation prevents path traversal and filename security issues

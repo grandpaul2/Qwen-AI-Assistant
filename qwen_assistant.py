@@ -362,6 +362,26 @@ class FileManager:
         except Exception as e:
             return f"Error deleting folder: {e}"
 
+    def copy_folder(self, src_folder: str, dest_folder: str, src_path: Optional[str] = None, dest_path: Optional[str] = None) -> str:
+        """Copy a folder and all its contents"""
+        src_folder_path = self._resolve(src_path, src_folder)
+        dest_folder_path = self._resolve(dest_path, dest_folder)
+        
+        if not os.path.exists(src_folder_path):
+            return f"Source folder '{src_folder}' does not exist."
+        
+        if not os.path.isdir(src_folder_path):
+            return f"'{src_folder}' is not a folder."
+            
+        if os.path.exists(dest_folder_path):
+            return f"Destination folder '{dest_folder}' already exists. Please choose a different name."
+        
+        try:
+            shutil.copytree(src_folder_path, dest_folder_path)
+            return f"Folder '{src_folder}' copied to '{dest_folder}' successfully!"
+        except Exception as e:
+            return f"Error copying folder: {e}"
+
     def copy_file(self, src_file: str, dest_file: str, src_path: Optional[str] = None, dest_path: Optional[str] = None) -> str:
         """Copy a file"""
         src_file_path = self._resolve(src_path, src_file)
@@ -487,6 +507,30 @@ class FileManager:
             return f"JSON written to '{file_name}' successfully!"
         except Exception as e:
             return f"Error writing JSON: {e}"
+
+    def write_txt_file(self, file_name: str, content: str, path: Optional[str] = None) -> str:
+        """Write content to a .txt file"""
+        if not file_name.endswith('.txt'):
+            file_name += '.txt'
+        return self.write_to_file(file_name, content, path)
+
+    def write_md_file(self, file_name: str, content: str, path: Optional[str] = None) -> str:
+        """Write content to a .md (markdown) file"""
+        if not file_name.endswith('.md'):
+            file_name += '.md'
+        return self.write_to_file(file_name, content, path)
+
+    def write_json_from_string(self, file_name: str, content: str, path: Optional[str] = None) -> str:
+        """Write content to a .json file (string version for AI tools)"""
+        if not file_name.endswith('.json'):
+            file_name += '.json'
+        try:
+            # Try to parse and format as JSON for better formatting
+            parsed_content = json.loads(content)
+            return self.write_json_file(file_name, parsed_content, path)
+        except json.JSONDecodeError:
+            # If it's not valid JSON, write as-is but with .json extension
+            return self.write_to_file(file_name, content, path)
 
     def get_file_metadata(self, file_name: str, path: Optional[str] = None) -> Union[Dict[str, str], str]:
         """Get file metadata"""
@@ -824,6 +868,23 @@ def get_all_tool_schemas():
         {
             "type": "function",
             "function": {
+                "name": "copy_folder",
+                "description": "Copy a folder and all its contents to a new location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "src_folder": {"type": "string", "description": "Name of the source folder to copy"},
+                        "dest_folder": {"type": "string", "description": "Name of the destination folder"},
+                        "src_path": {"type": "string", "description": "Override source working directory"},
+                        "dest_path": {"type": "string", "description": "Override destination working directory"}
+                    },
+                    "required": ["src_folder", "dest_folder"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "search_files",
                 "description": "Search filenames and optionally contents for a keyword",
                 "parameters": {
@@ -942,6 +1003,54 @@ def get_all_tool_schemas():
                     "properties": {
                         "file_name": {"type": "string", "description": "JSON file name"},
                         "content": {"type": "object", "description": "Data to write as JSON"},
+                        "path": {"type": "string", "description": "Override working directory"}
+                    },
+                    "required": ["file_name", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_txt_file",
+                "description": "Write content to a .txt file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {"type": "string", "description": "File name (will auto-add .txt extension)"},
+                        "content": {"type": "string", "description": "Content to write"},
+                        "path": {"type": "string", "description": "Override working directory"}
+                    },
+                    "required": ["file_name", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_md_file",
+                "description": "Write content to a .md (markdown) file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {"type": "string", "description": "File name (will auto-add .md extension)"},
+                        "content": {"type": "string", "description": "Markdown content to write"},
+                        "path": {"type": "string", "description": "Override working directory"}
+                    },
+                    "required": ["file_name", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_json_from_string",
+                "description": "Write content to a .json file from string content",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {"type": "string", "description": "File name (will auto-add .json extension)"},
+                        "content": {"type": "string", "description": "JSON content as string"},
                         "path": {"type": "string", "description": "Override working directory"}
                     },
                     "required": ["file_name", "content"]
@@ -1355,10 +1464,8 @@ def generate_install_commands(software, method="auto"):
 def interactive_mode():
     """Interactive chat mode with rolling memory"""
     print("\n" + "="*70)
-    print("QWEN 2.5 ASSISTANT with File Management v2.2 (Cross-Platform)")
+    print("Qwen Assistant v2.2")
     print("="*70)
-    print(f"Platform: {platform.system()} {platform.release()}")
-    print(f"Base path: {file_manager.base_path}")
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
     
@@ -1366,23 +1473,16 @@ def interactive_mode():
     if platform.system() == "Linux":
         detected_pm = detect_linux_package_manager()
         print(f"Package manager: {detected_pm if detected_pm else 'Not detected'}")
-    
-    # Show log file location
-    log_dir = os.path.dirname(APP_CONFIG["paths"]["config"])
-    log_file = os.path.join(log_dir, 'qwen_assistant.log')
-    print(f"Log file: {log_file}")
 
     if memory.recent_conversations or memory.summarized_conversations:
         print("Continuing from previous conversations...")
 
-    print("\nAvailable Commands:")
-    print("- Normal questions and file operations")
-    print("- 'chat: question' - force normal chat mode")
-    print("- 'tools: command' - force file tools mode")
-    print("- 'install python' - cross-platform software installation commands")
+    print("\n- 'chat: question...' - force chat without using tools")
+    print("- 'tools: command...' - force file management tools")
+    print("- 'install: software...' - get installation commands")
 
-    print("\nControl Commands:")
-    print("- /new        Start new conversation")
+    print("\n- /new        Start new conversation")
+    print("- /tools      List available tools")
     print("- /memory     Show memory status")
     print("- /config     Configure settings")
     print("- /reset      Clear all memory")
@@ -1399,6 +1499,25 @@ def interactive_mode():
                 break
             elif prompt == '/new':
                 memory.start_new_conversation()
+            elif prompt == '/tools':
+                print("\nAvailable File Management Tools:")
+                print("- create file...")
+                print("- read file...")
+                print("- write to file...")
+                print("- delete file...")
+                print("- copy file...")
+                print("- move file...")
+                print("- get file info...")
+                print("- list files...")
+                print("- search files...")
+                print("- compress files...")
+                print("- create folder...")
+                print("- copy folder...")
+                print("- delete folder...")
+                print("- write .json...")
+                print("- write .txt...")
+                print("- write .md...")
+                print("\nUse 'tools: <command>' to force the use of that tool")
             elif prompt == '/memory':
                 print(f"Memory Status:")
                 print(f"  Current: {len(memory.current_conversation)} messages")
