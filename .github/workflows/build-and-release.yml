@@ -45,7 +45,7 @@ jobs:
         pyinstaller --onefile --console qwen_assistant.py --name Qwen-AI-Assistant
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.build_name }}-executable
         path: |
@@ -64,16 +64,14 @@ jobs:
       run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.tag.outputs.TAG_NAME }}
-        release_name: Qwen-AI-Assistant ${{ steps.tag.outputs.TAG_NAME }}
+        name: Qwen-AI-Assistant ${{ steps.tag.outputs.TAG_NAME }}
         draft: false
         prerelease: false
         body: |
@@ -97,23 +95,6 @@ jobs:
           chmod +x Qwen-AI-Assistant-linux
           ./Qwen-AI-Assistant-linux
           ```
-    
-    - name: Upload Windows Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./windows-executable/Qwen-AI-Assistant.exe
-        asset_name: Qwen-AI-Assistant-windows.exe
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Linux Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./linux-executable/Qwen-AI-Assistant
-        asset_name: Qwen-AI-Assistant-linux
-        asset_content_type: application/octet-stream
+        files: |
+          ./windows-executable/Qwen-AI-Assistant.exe
+          ./linux-executable/Qwen-AI-Assistant
