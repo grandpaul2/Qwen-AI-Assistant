@@ -39,9 +39,13 @@ jobs:
       run: |
         pyinstaller --onefile --console qwen_assistant.py --name Qwen-AI-Assistant
 
-    - name: Rename output for release
-      run: |
-        mv dist/Qwen-AI-Assistant${{ matrix.os == 'windows-latest' && '.exe' || '' }} dist/${{ matrix.asset_name }}
+    - name: Rename output for Windows
+      if: matrix.os == 'windows-latest'
+      run: mv dist/Qwen-AI-Assistant.exe dist/Qwen-AI-Assistant-windows.exe
+
+    - name: Rename output for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: mv dist/Qwen-AI-Assistant dist/Qwen-AI-Assistant-linux
 
     - name: Upload Artifact (optional)
       uses: actions/upload-artifact@v4
