@@ -43,14 +43,9 @@ ollama serve
 pip install requests tqdm
 ```
 
-### 3. **Start Assistant**
+### 4. **Start Assistant**
 ```bash
 python qwen.py
-```
-
-### 4. **Test Setup**
-```bash
-python test_qwen.py  # Run diagnostics (if available)
 ```
 
 ## 📂 Directory Structure
