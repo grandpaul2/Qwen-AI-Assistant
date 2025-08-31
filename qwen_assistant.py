@@ -15,7 +15,6 @@ import sys
 import os
 import time
 from datetime import datetime
-from tqdm import tqdm
 import threading
 import shutil
 import logging
@@ -25,7 +24,58 @@ import tarfile
 from collections import defaultdict
 from typing import Optional, List, Union, Dict, Any
 
-logging.basicConfig(level=logging.INFO)
+# Import tqdm with fallback
+try:
+    from tqdm import tqdm
+except ImportError:
+    print("Warning: tqdm not installed. Install with: pip install tqdm")
+    # Fallback progress bar
+    class tqdm:
+        def __init__(self, total=100, desc="Progress", ncols=70, bar_format=None):
+            self.total = total
+            self.desc = desc
+            self.current = 0
+        
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, *args):
+            pass
+        
+        def update(self, n):
+            self.current += n
+            if self.current % 20 == 0:  # Show progress every 20%
+                print(f"\r{self.desc}: {int(self.current/self.total*100)}%", end="", flush=True)
+
+# Configure logging (will be updated after config is loaded)
+def setup_logging(config=None):
+    """Setup logging with proper file location"""
+    if config is None:
+        # Temporary setup before config is loaded
+        log_file = 'qwen_assistant.log'
+    else:
+        # Use QwenAssistant folder for log file
+        log_dir = os.path.dirname(config["paths"]["config"])
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, 'qwen_assistant.log')
+    
+    # Clear any existing handlers
+    logging.getLogger().handlers.clear()
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(log_file, encoding='utf-8')
+        ],
+        force=True
+    )
+    return logging.getLogger('QwenAssistant')
+
+# Initial logger setup (will be reconfigured after config loads)
+logger = setup_logging()
 
 # Configuration Management
 def get_script_directory():
@@ -60,17 +110,31 @@ def load_config():
     
     try:
         if os.path.exists(config_path):
+            logger.info(f"Loading configuration from {config_path}")
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 # Ensure all required keys exist (for upgrades)
                 default_config = get_default_config()
+                updated = False
                 for key in default_config:
                     if key not in config:
                         config[key] = default_config[key]
+                        updated = True
+                        logger.info(f"Added missing config key: {key}")
+                
+                if updated:
+                    save_config(config)
+                    logger.info("Configuration updated with missing keys")
+                
                 return config
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in config file: {e}")
+        print(f"Warning: Invalid JSON in config file ({e}), using defaults")
     except Exception as e:
+        logger.error(f"Could not load config: {e}")
         print(f"Warning: Could not load config ({e}), using defaults")
     
+    logger.info("Using default configuration")
     return get_default_config()
 
 def save_config(config):
@@ -78,10 +142,31 @@ def save_config(config):
     config_path = config["paths"]["config"]
     try:
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        # Validate config before saving
+        if not isinstance(config, dict):
+            raise ValueError("Configuration must be a dictionary")
+        
+        # Create backup of existing config
+        if os.path.exists(config_path):
+            backup_path = config_path + ".backup"
+            shutil.copy2(config_path, backup_path)
+            logger.info(f"Created config backup: {backup_path}")
+        
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=4)
+            json.dump(config, f, indent=4, ensure_ascii=False)
+        
+        logger.info(f"Configuration saved to {config_path}")
         return True
+    except (OSError, IOError) as e:
+        logger.error(f"File system error saving config: {e}")
+        print(f"Error saving config: {e}")
+        return False
+    except (TypeError, ValueError) as e:
+        logger.error(f"JSON serialization error: {e}")
+        print(f"Error encoding config to JSON: {e}")
+        return False
     except Exception as e:
+        logger.error(f"Unexpected error saving config: {e}")
         print(f"Error saving config: {e}")
         return False
 
@@ -122,9 +207,48 @@ class FileManager:
         os.makedirs(self.base_path, exist_ok=True)
 
     def _resolve(self, path: Optional[str], *parts: str) -> str:
-        """Join base_path with parts"""
+        """Join base_path with parts and validate for security"""
         root = path if path else self.base_path
-        return os.path.join(root, *[p for p in parts if p])
+        full_path = os.path.join(root, *[p for p in parts if p])
+        
+        # Normalize path to prevent directory traversal
+        full_path = os.path.normpath(full_path)
+        
+        # Security check: ensure path doesn't escape base directory
+        if not path:  # Only check if using base_path
+            try:
+                # Get absolute paths for comparison
+                abs_base = os.path.abspath(self.base_path)
+                abs_full = os.path.abspath(full_path)
+                
+                # Check if the resolved path is within the base directory
+                if not abs_full.startswith(abs_base + os.sep) and abs_full != abs_base:
+                    logger.warning(f"Path traversal attempt blocked: {full_path}")
+                    raise ValueError(f"Path '{full_path}' is outside the allowed directory")
+            except Exception as e:
+                logger.error(f"Path validation error: {e}")
+                raise ValueError(f"Invalid path: {full_path}")
+        
+        return full_path
+
+    def _validate_filename(self, filename: str) -> None:
+        """Validate filename for security and filesystem compatibility"""
+        if not filename or not filename.strip():
+            raise ValueError("Filename cannot be empty")
+        
+        # Check for invalid characters
+        invalid_chars = '<>:"|?*'
+        if any(char in filename for char in invalid_chars):
+            raise ValueError(f"Filename contains invalid characters: {invalid_chars}")
+        
+        # Check for reserved names on Windows
+        reserved_names = ['CON', 'PRN', 'AUX', 'NUL'] + [f'COM{i}' for i in range(1, 10)] + [f'LPT{i}' for i in range(1, 10)]
+        if filename.upper().split('.')[0] in reserved_names:
+            raise ValueError(f"Filename '{filename}' is reserved and cannot be used")
+        
+        # Check length
+        if len(filename) > 255:
+            raise ValueError("Filename too long (max 255 characters)")
 
     def _guard_overwrite(self, path: str) -> Optional[str]:
         """Check safe mode for overwriting files"""
@@ -134,16 +258,33 @@ class FileManager:
 
     def create_file(self, file_name: str, content: str = "", path: Optional[str] = None) -> str:
         """Create a new file with content"""
-        file_path = self._resolve(path, file_name)
-        guard_result = self._guard_overwrite(file_path)
-        if guard_result:
-            return guard_result
         try:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            self._validate_filename(os.path.basename(file_name))
+            file_path = self._resolve(path, file_name)
+            
+            guard_result = self._guard_overwrite(file_path)
+            if guard_result:
+                return guard_result
+            
+            # Ensure directory exists
+            dir_path = os.path.dirname(file_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(content)
+            
+            logger.info(f"Created file: {file_path}")
             return f"File '{file_name}' created successfully!"
+            
+        except ValueError as e:
+            logger.error(f"Validation error creating file '{file_name}': {e}")
+            return f"Error: {e}"
+        except (OSError, IOError) as e:
+            logger.error(f"File system error creating '{file_name}': {e}")
+            return f"Error creating file: {e}"
         except Exception as e:
+            logger.error(f"Unexpected error creating file '{file_name}': {e}")
             return f"Error creating file: {e}"
 
     def read_file(self, file_name: str, path: Optional[str] = None) -> str:
@@ -389,9 +530,30 @@ class MemoryManager:
                 'summarized_conversations': self.summarized_conversations,
                 'last_updated': datetime.now().isoformat()
             }
-            with open(self.memory_file, 'w', encoding='utf-8') as f:
+            
+            # Create backup before overwriting
+            if os.path.exists(self.memory_file):
+                backup_file = self.memory_file + ".backup"
+                shutil.copy2(self.memory_file, backup_file)
+            
+            # Write to temporary file first, then rename (atomic operation)
+            temp_file = self.memory_file + ".tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # Atomic rename
+            if os.path.exists(self.memory_file):
+                os.replace(temp_file, self.memory_file)
+            else:
+                os.rename(temp_file, self.memory_file)
+                
+            logger.debug("Memory saved successfully")
+            
+        except (OSError, IOError) as e:
+            logger.error(f"File system error saving memory: {e}")
+            print(f"⚠️ Could not save memory: {e}")
         except Exception as e:
+            logger.error(f"Unexpected error saving memory: {e}")
             print(f"⚠️ Could not save memory: {e}")
     
     def add_message(self, role, content, tool_calls=None):
@@ -794,70 +956,124 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         progress_thread = threading.Thread(target=show_progress, args=("Processing with context", 3), daemon=True)
         progress_thread.start()
     
-    # Ollama API call
+    # Ollama API call with timeout and retry logic
     host = APP_CONFIG['settings']['ollama_host']
-    response = requests.post(f"http://{host}/api/chat", json=request_data)
+    max_retries = 3
+    timeout = 30
+    response = None
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Calling Ollama API (attempt {attempt + 1}/{max_retries})")
+            response = requests.post(
+                f"http://{host}/api/chat", 
+                json=request_data,
+                timeout=timeout
+            )
+            
+            if response.status_code == 200:
+                break
+            else:
+                logger.warning(f"Ollama API returned status {response.status_code}: {response.text}")
+                if attempt == max_retries - 1:
+                    print(f"Error: {response.status_code} - {response.text}")
+                    return
+                
+        except requests.exceptions.Timeout:
+            logger.warning(f"Ollama API timeout (attempt {attempt + 1}/{max_retries})")
+            if attempt == max_retries - 1:
+                print(f"Error: Ollama API timeout after {timeout}s")
+                return
+                
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"Ollama connection failed (attempt {attempt + 1}/{max_retries})")
+            if attempt == max_retries - 1:
+                print("Error: Could not connect to Ollama. Is it running?")
+                return
+                
+        except Exception as e:
+            logger.error(f"Unexpected error calling Ollama: {e}")
+            if attempt == max_retries - 1:
+                print(f"Error: {e}")
+                return
+        
+        # Wait before retry
+        if attempt < max_retries - 1:
+            time.sleep(2 ** attempt)  # Exponential backoff
     
     if progress_thread:
         progress_thread.join()
     
-    if response.status_code != 200:
-        print(f"Error: {response.status_code} - {response.text}")
+    # Check if we got a valid response
+    if response is None or response.status_code != 200:
+        logger.error("Failed to get valid response from Ollama after all retries")
+        print("Error: Could not get response from Ollama")
         return
     
-    result = response.json()
-    message = result["message"]
-    
-    # Add space before assistant response
-    print()
-    assistant_content = message.get('content', '')
-    print(f"Assistant: {assistant_content}")
-    
-    # Add assistant message to memory
-    tool_calls_data = message.get('tool_calls', None)
-    memory.add_message("assistant", assistant_content, tool_calls_data)
-    
-    # Handle tool calls
-    if tool_calls_data:
-        for tool_call in tool_calls_data:
-            function_name = tool_call["function"]["name"]
-            function_args = tool_call["function"]["arguments"]
-            
-            print(f"\n🔧 Tool Call: {function_name}")
-            print(f"Arguments: {json.dumps(function_args, indent=2)}")
-            
-            # Show progress for potentially slow operations
-            slow_operations = ['search_files', 'backup_files', 'compress_file']
-            progress_thread = None
-            if function_name in slow_operations:
-                progress_thread = threading.Thread(target=show_progress, args=(f"Running {function_name}", 2), daemon=True)
-                progress_thread.start()
-            
-    # Execute the tool function
-            if hasattr(file_manager, function_name):
+    try:
+        result = response.json()
+        message = result["message"]
+        
+        # Add space before assistant response
+        print()
+        assistant_content = message.get('content', '')
+        print(f"Assistant: {assistant_content}")
+        
+        # Add assistant message to memory
+        tool_calls_data = message.get('tool_calls', None)
+        memory.add_message("assistant", assistant_content, tool_calls_data)
+        
+        # Handle tool calls
+        if tool_calls_data:
+            for tool_call in tool_calls_data:
+                function_name = tool_call["function"]["name"]
+                function_args = tool_call["function"]["arguments"]
+                
+                print(f"\n🔧 Tool Call: {function_name}")
+                print(f"Arguments: {json.dumps(function_args, indent=2)}")
+                
+                # Show progress for potentially slow operations
+                slow_operations = ['search_files', 'backup_files', 'compress_file']
+                progress_thread = None
+                if function_name in slow_operations:
+                    progress_thread = threading.Thread(target=show_progress, args=(f"Running {function_name}", 2), daemon=True)
+                    progress_thread.start()
+                
+                # Execute the tool function
                 try:
-                    result = getattr(file_manager, function_name)(**function_args)
-                    print(f"✅ Result: {result}")
+                    if hasattr(file_manager, function_name):
+                        result = getattr(file_manager, function_name)(**function_args)
+                        print(f"✅ Result: {result}")
+                        memory.add_message("tool", f"{function_name}: {result}")
+                    elif function_name == "generate_install_commands":
+                        result = generate_install_commands(**function_args)
+                        print(f"✅ Generated Commands:")
+                        print(result)
+                        memory.add_message("tool", f"Generated install commands: {result}")
+                    else:
+                        error_msg = f"Unknown function: {function_name}"
+                        logger.error(error_msg)
+                        print(f"❌ {error_msg}")
+                        memory.add_message("tool", f"Error: {error_msg}")
+                        
+                except Exception as e:
+                    error_msg = f"Error executing {function_name}: {e}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    memory.add_message("tool", error_msg)
+                
+                if progress_thread is not None:
+                    progress_thread.join()
                     
-                    # Add tool result to memory
-                    memory.add_message("tool", f"{function_name}: {result}")
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-                    memory.add_message("tool", f"{function_name} error: {e}")
-            elif function_name == "generate_install_commands":
-                try:
-                    result = generate_install_commands(**function_args)
-                    print(f"✅ Generated Commands:")
-                    print(result)
-                    memory.add_message("tool", f"Generated install commands: {result}")
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-                    memory.add_message("tool", f"Command generation error: {e}")
-            else:
-                print(f"❌ Unknown function: {function_name}")
-            
-            if progress_thread is not None:
-                progress_thread.join()
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON response from Ollama: {e}")
+        print("Error: Invalid response from Ollama")
+    except KeyError as e:
+        logger.error(f"Missing expected field in Ollama response: {e}")
+        print("Error: Unexpected response format from Ollama")
+    except Exception as e:
+        logger.error(f"Error processing Ollama response: {e}")
+        print(f"Error processing response: {e}")
 
 def generate_install_commands(software, method="auto"):
     """Generate installation commands for popular software"""
@@ -978,6 +1194,11 @@ def interactive_mode():
     print(f"Base path: {file_manager.base_path}")
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
+    
+    # Show log file location
+    log_dir = os.path.dirname(APP_CONFIG["paths"]["config"])
+    log_file = os.path.join(log_dir, 'qwen_assistant.log')
+    print(f"Log file: {log_file}")
 
     if memory.recent_conversations or memory.summarized_conversations:
         print("Continuing from previous conversations...")
@@ -1002,6 +1223,7 @@ def interactive_mode():
             prompt = input("\nYou: ").strip()
             if prompt.lower() in ['exit', 'quit', 'q']:
                 print("Exiting Qwen Assistant.")
+                logger.info("User exited application")
                 break
             elif prompt == '/new':
                 memory.start_new_conversation()
@@ -1010,46 +1232,94 @@ def interactive_mode():
                 print(f"  Current: {len(memory.current_conversation)} messages")
                 print(f"  Recent: {len(memory.recent_conversations)} full conversations")
                 print(f"  Summarized: {len(memory.summarized_conversations)} conversations")
+                logger.info("Memory status displayed")
             elif prompt == '/config':
                 configure_settings()
             elif prompt == '/reset':
                 memory.reset_memory()
                 memory.save_memory()
                 print("Memory cleared")
+                logger.info("Memory reset by user")
             elif not prompt:
                 continue
             elif prompt.lower().startswith('chat:'):
                 actual_prompt = prompt[5:].strip()
-                call_ollama_with_tools(actual_prompt, use_tools=False)
+                if actual_prompt:
+                    call_ollama_with_tools(actual_prompt, use_tools=False)
+                else:
+                    print("Please provide a question after 'chat:'")
             elif prompt.lower().startswith('tools:'):
                 actual_prompt = prompt[6:].strip()
-                call_ollama_with_tools(actual_prompt, use_tools=True)
+                if actual_prompt:
+                    call_ollama_with_tools(actual_prompt, use_tools=True)
+                else:
+                    print("Please provide a command after 'tools:'")
             else:
                 file_keywords = ['file', 'folder', 'create', 'delete', 'read', 'write',
                                  'copy', 'move', 'list', 'search', 'compress', 'backup',
                                  'json', 'metadata', 'sync']
                 looks_like_file_task = any(keyword in prompt.lower() for keyword in file_keywords)
                 call_ollama_with_tools(prompt, use_tools=looks_like_file_task)
+                
         except KeyboardInterrupt:
             print("\nSaving memory and exiting...")
+            logger.info("User interrupted with Ctrl+C")
             memory.save_memory()
             break
+        except EOFError:
+            print("\nEOF received, exiting...")
+            logger.info("EOF received")
+            memory.save_memory()
+            break
+        except Exception as e:
+            logger.error(f"Unexpected error in interactive loop: {e}")
+            print(f"⚠️ An error occurred: {e}")
+            print("You can continue or type 'exit' to quit.")
 
 def test_ollama_connection():
     """Test if Ollama is running and accessible"""
     try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        logger.info("Testing Ollama connection...")
+        host = APP_CONFIG['settings']['ollama_host']
+        response = requests.get(f"http://{host}/api/tags", timeout=10)
+        
         if response.status_code == 200:
             models = response.json().get('models', [])
             qwen_models = [m['name'] for m in models if 'qwen' in m['name'].lower()]
+            
             if qwen_models:
                 print(f"✅ Ollama connected! Available Qwen models: {', '.join(qwen_models)}")
+                logger.info(f"Ollama connection successful. Qwen models: {qwen_models}")
                 return True
             else:
                 print("⚠️  Ollama connected but no Qwen models found!")
                 print(f"💡 Run: ollama pull {APP_CONFIG['settings']['model']}")
+                logger.warning("No Qwen models found in Ollama")
                 return False
+        else:
+            logger.error(f"Ollama returned status {response.status_code}: {response.text}")
+            print(f"❌ Ollama error: {response.status_code}")
+            return False
+            
+    except requests.exceptions.Timeout:
+        logger.error("Ollama connection timeout")
+        print("❌ Ollama connection timeout (10s)")
+        print("💡 Make sure Ollama is running: ollama serve")
+        return False
+        
+    except requests.exceptions.ConnectionError:
+        logger.error("Could not connect to Ollama")
+        print("❌ Could not connect to Ollama")
+        print("💡 Make sure Ollama is running: ollama serve")
+        return False
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON response from Ollama: {e}")
+        print("❌ Invalid response from Ollama")
+        return False
+        
     except Exception as e:
+        logger.error(f"Unexpected error testing Ollama connection: {e}")
         print(f"❌ Ollama connection failed: {e}")
         print("💡 Make sure Ollama is running: ollama serve")
         return False
@@ -1115,7 +1385,7 @@ def configure_settings():
 
 def main():
     """Setup and start enhanced interactive mode"""
-    global file_manager, memory
+    global file_manager, memory, logger
     
     print("🚀 Initializing Qwen Assistant...")
     
@@ -1123,6 +1393,10 @@ def main():
     if not os.path.exists(APP_CONFIG["paths"]["config"]):
         save_config(APP_CONFIG)
         print("✅ Created default configuration")
+    
+    # Reconfigure logging with proper location
+    logger = setup_logging(APP_CONFIG)
+    logger.info("Qwen Assistant starting up")
     
     # Initialize managers with current config
     file_manager = FileManager(APP_CONFIG)

@@ -1,0 +1,17 @@
+{
+    "version": "2.1",
+    "paths": {
+        "outputs": "C:\\Users\\Grandpaul\\Desktop\\AI Work\\Qwen\\QwenAssistant\\outputs",
+        "memory": "C:\\Users\\Grandpaul\\Desktop\\AI Work\\Qwen\\QwenAssistant\\memory",
+        "config": "C:\\Users\\Grandpaul\\Desktop\\AI Work\\Qwen\\QwenAssistant\\config.json"
+    },
+    "settings": {
+        "model": "qwen2.5:3b",
+        "safe_mode": true,
+        "ollama_host": "localhost:11434",
+        "compress_format": "zip",
+        "search_case_sensitive": false,
+        "search_content": true,
+        "search_max_file_kb": 1024
+    }
+}
