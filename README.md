@@ -1,4 +1,4 @@
-# 🤖 Qwen Assistant v2.2 (Cross-Platform) - Enhanced Edition
+# 🤖 Qwen Assistant v2.2
 
 A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management capabilities and persistent memory - **works on Windows and Linux!**
 
@@ -102,7 +102,7 @@ ollama pull qwen2.5:3b
 python3 qwen_assistant.py
 ```
 
-*Starts directly in chat mode - auto-creates QwenAssistant folder with outputs, memory, and config on first run*
+*Starts directly in chat mode - auto-creates QwenAssistant folder with workspace, memory, and config on first run*
 
 ## 🔧 **Recent Improvements (v2.2 Enhanced)**
 
@@ -135,7 +135,7 @@ python3 qwen_assistant.py
 ├── requirements.txt           # Dependencies list for easy setup
 ├── install_linux.sh           # Linux installation script
 └── QwenAssistant/            # Auto-created on first run
-    ├── outputs/              # File operations base directory
+    ├── workspace/            # File operations working directory
     ├── memory/               # Persistent conversation memory
     ├── config.json          # User settings
     └── qwen_assistant.log    # Application logs
@@ -291,7 +291,7 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 {
   "version": "2.2",
   "paths": {
-    "outputs": "./QwenAssistant/outputs",
+    "workspace": "./QwenAssistant/workspace",
     "memory": "./QwenAssistant/memory"
   },
   "settings": {

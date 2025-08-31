@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Qwen with Rolling Memory + Supreme File Management (Cross-Platform)
@@ -9,6 +10,12 @@ Updated: August 30, 2025
 Features: Rolling memory, file management, software installation commands, Windows/Linux support
 """
 
+# Color constants for terminal output
+CYAN = "\033[36m"
+LIGHT_GREEN = "\033[92m"
+RESET = "\033[0m"
+
+# Imports (move all to top)
 import json
 import requests
 import sys
@@ -27,36 +34,6 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Optional, List, Union, Dict, Any
 
-# Import tqdm with fallback
-try:
-    from tqdm import tqdm
-    TQDM_AVAILABLE = True
-except ImportError:
-    TQDM_AVAILABLE = False
-    print("Warning: tqdm not installed. Install with: pip install tqdm")
-    
-    # Fallback progress bar class
-    class TqdmFallback:
-        def __init__(self, total=100, desc="Progress", ncols=70, bar_format=None):
-            self.total = total
-            self.desc = desc
-            self.current = 0
-        
-        def __enter__(self):
-            return self
-        
-        def __exit__(self, *args):
-            pass
-        
-        def update(self, n):
-            self.current += n
-            if self.current % 20 == 0:  # Show progress every 20%
-                print(f"\r{self.desc}: {int(self.current/self.total*100)}%", end="", flush=True)
-    
-    # Use fallback
-    tqdm = TqdmFallback
-
-# Configuration constants
 CONSTANTS = {
     'API_TIMEOUT': 30,
     'API_MAX_RETRIES': 3,
@@ -70,22 +47,35 @@ CONSTANTS = {
     'VERSION': "2.2"
 }
 
-# Configure logging (will be updated after config is loaded)
-def setup_logging(config=None):
-    """Setup logging with proper file location"""
-    if config is None:
-        # Temporary setup before config is loaded
-        log_file = 'qwen_assistant.log'
-    else:
-        # Use QwenAssistant folder for log file
-        log_dir = os.path.dirname(config["paths"]["config"])
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, 'qwen_assistant.log')
-    
-    # Clear any existing handlers
+# Import tqdm with fallback
+try:
+    from tqdm import tqdm
+    TQDM_AVAILABLE = True
+except ImportError:
+    TQDM_AVAILABLE = False
+    print("Warning: tqdm not installed. Install with: pip install tqdm")
+    class TqdmFallback:
+        def __init__(self, total=100, desc="Progress", ncols=70, bar_format=None):
+            self.total = total
+            self.desc = desc
+            self.current = 0
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def update(self, n):
+            self.current += n
+            percent = int((self.current / self.total) * 100)
+            print(f"{self.desc}: {percent}%", end='\r')
+    tqdm = TqdmFallback
+
+# Setup logging (only after config is loaded)
+def setup_logging(config):
+    """Setup logging with proper file location from config"""
+    log_dir = os.path.dirname(config["paths"]["config"])
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'qwen_assistant.log')
     logging.getLogger().handlers.clear()
-    
-    # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -96,9 +86,6 @@ def setup_logging(config=None):
         force=True
     )
     return logging.getLogger('QwenAssistant')
-
-# Initial logger setup (will be reconfigured after config loads)
-logger = setup_logging()
 
 # Configuration Management
 def get_script_directory():
@@ -111,7 +98,7 @@ def get_default_config():
     return {
         "version": CONSTANTS['VERSION'],
         "paths": {
-            "outputs": os.path.join(script_dir, "QwenAssistant", "outputs"),
+            "workspace": os.path.join(script_dir, "QwenAssistant", "workspace"),
             "memory": os.path.join(script_dir, "QwenAssistant", "memory"),
             "config": os.path.join(script_dir, "QwenAssistant", "config.json")
         },
@@ -130,35 +117,62 @@ def load_config():
     """Load configuration from file or create default"""
     script_dir = get_script_directory()
     config_path = os.path.join(script_dir, "QwenAssistant", "config.json")
-    
     try:
         if os.path.exists(config_path):
-            logger.info(f"Loading configuration from {config_path}")
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                # Ensure all required keys exist (for upgrades)
-                default_config = get_default_config()
-                updated = False
-                for key in default_config:
-                    if key not in config:
-                        config[key] = default_config[key]
-                        updated = True
-                        logger.info(f"Added missing config key: {key}")
-                
-                if updated:
-                    save_config(config)
-                    logger.info("Configuration updated with missing keys")
-                
-                return config
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in config file: {e}")
-        print(f"Warning: Invalid JSON in config file ({e}), using defaults")
+            # Ensure all required keys exist (for upgrades)
+            default_config = get_default_config()
+            updated = False
+            for key in default_config:
+                if key not in config:
+                    config[key] = default_config[key]
+                    updated = True
+            for section in default_config:
+                if isinstance(default_config[section], dict):
+                    for subkey in default_config[section]:
+                        if subkey not in config[section]:
+                            config[section][subkey] = default_config[section][subkey]
+                            updated = True
+            if updated:
+                save_config(config)
+            return config
+        else:
+            return get_default_config()
     except Exception as e:
-        logger.error(f"Could not load config: {e}")
-        print(f"Warning: Could not load config ({e}), using defaults")
-    
-    logger.info("Using default configuration")
-    return get_default_config()
+        print(f"Error loading config: {e}")
+        return get_default_config()
+
+def setup_directories(config):
+    """Create necessary directories"""
+    try:
+        os.makedirs(config["paths"]["workspace"], exist_ok=True)
+        os.makedirs(config["paths"]["memory"], exist_ok=True)
+        os.makedirs(os.path.dirname(config["paths"]["config"]), exist_ok=True)
+        return True
+    except Exception as e:
+        print(f"Error creating directories: {e}")
+        return False
+
+
+# Setup logging (only after config is loaded)
+import subprocess
+from pathlib import Path
+from collections import defaultdict
+from typing import Optional, List, Union, Dict, Any
+
+CONSTANTS = {
+    'API_TIMEOUT': 30,
+    'API_MAX_RETRIES': 3,
+    'SUMMARY_TIMEOUT': 10,
+    'MEMORY_CONTEXT_MESSAGES': 10,
+    'MAX_RECENT_CONVERSATIONS': 2,
+    'MAX_SUMMARIZED_CONVERSATIONS': 8,
+    'MAX_FILENAME_LENGTH': 255,
+    'PROGRESS_DURATION': 2,
+    'SEARCH_MAX_FILE_KB': 1024,
+    'VERSION': "2.2"
+}
 
 def save_config(config):
     """Save configuration to file"""
@@ -193,20 +207,17 @@ def save_config(config):
         print(f"Error saving config: {e}")
         return False
 
-def setup_directories(config):
-    """Create necessary directories"""
-    try:
-        os.makedirs(config["paths"]["outputs"], exist_ok=True)
-        os.makedirs(config["paths"]["memory"], exist_ok=True)
-        os.makedirs(os.path.dirname(config["paths"]["config"]), exist_ok=True)
-        return True
-    except Exception as e:
-        print(f"Error creating directories: {e}")
-        return False
+# Global configuration
+APP_CONFIG = load_config()
+setup_directories(APP_CONFIG)
+# Setup logging after config is loaded
+logger = setup_logging(APP_CONFIG)
 
 # Global configuration
 APP_CONFIG = load_config()
 setup_directories(APP_CONFIG)
+# Setup logging after config is loaded
+logger = setup_logging(APP_CONFIG)
 
 # File Manager Class - Built into single file
 class FileManager:
@@ -216,7 +227,7 @@ class FileManager:
         if config is None:
             config = APP_CONFIG
         
-        self.base_path = config["paths"]["outputs"]
+        self.base_path = config["paths"]["workspace"]
         self.safe_mode = config["settings"]["safe_mode"]
         self.default_compress_format = config["settings"]["compress_format"]
         self.search_case_sensitive = config["settings"]["search_case_sensitive"]
@@ -1193,7 +1204,7 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         # Add space before assistant response
         print()
         assistant_content = message.get('content', '')
-        print(f"Assistant: {assistant_content}")
+        print(f"{LIGHT_GREEN}Assistant: {assistant_content}{RESET}")
         
         # Add assistant message to memory
         tool_calls_data = message.get('tool_calls', None)
@@ -1497,6 +1508,7 @@ def interactive_mode():
     print("="*70)
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
+    print("Workspace: \\QwenAssistant\\workspace")
     
     # Show detected package manager on Linux
     if platform.system() == "Linux":
@@ -1517,11 +1529,11 @@ def interactive_mode():
     print("- /reset      Clear all memory")
     print("- exit        Quit")
     print("="*70)
-    print("Ready for your questions...")
+    print("Ready for your input...")
 
     while True:
         try:
-            prompt = input("\nYou: ").strip()
+            prompt = input(f"\n{CYAN}You: {RESET}").strip()
             if prompt.lower() in ['exit', 'quit', 'q']:
                 print("Exiting Qwen Assistant.")
                 logger.info("User exited application")
