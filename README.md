@@ -1,6 +1,6 @@
-# Qwen Assistant v2.2
+# WorkspaceAI v2.2
 
-An AI assistant that combines Qwen 2.5:3B with file management capabilities and persistent memory. Works on Windows and Linux.
+An AI assistant that combines modern language models with file management capabilities and persistent memory. Works on Windows and Linux.
 
 ## Features
 
@@ -67,7 +67,7 @@ pip install requests tqdm
 
 #### 3. Start Assistant
 ```bash
-python qwen_assistant.py
+python workspaceai.py
 ```
 
 ### Linux Setup
@@ -98,10 +98,10 @@ ollama pull qwen2.5:3b
 
 #### 3. Start Assistant
 ```bash
-python3 qwen_assistant.py
+python3 workspaceai.py
 ```
 
-Starts directly in chat mode - auto-creates QwenAssistant folder with workspace, memory, and config on first run.
+Starts directly in chat mode - auto-creates WorkspaceAI folder with workspace, memory, and config on first run.
 
 ## Recent Improvements (v2.2)
 
@@ -130,14 +130,14 @@ Starts directly in chat mode - auto-creates QwenAssistant folder with workspace,
 ## Directory Structure
 ```
 [wherever you put the file]/
-├── qwen_assistant.py          # Main application file
-├── requirements.txt           # Dependencies list for easy setup
-├── install_linux.sh           # Linux installation script
-└── QwenAssistant/            # Auto-created on first run
-    ├── workspace/            # File operations working directory
-    ├── memory/               # Persistent conversation memory
-    ├── config.json          # User settings
-    └── qwen_assistant.log    # Application logs
+├── workspaceai.py                 # Main application file
+├── requirements.txt               # Dependencies list for easy setup
+├── install_linux.sh               # Linux installation script
+└── WorkspaceAI/                  # Auto-created on first run
+    ├── workspace/                # File operations working directory
+    ├── memory/                   # Persistent conversation memory
+    ├── config.json              # User settings
+    └── workspaceai.log           # Application logs
 ```
 
 ## Command Reference
@@ -152,7 +152,7 @@ ollama run qwen2.5:3b
 
 #### Start Chat:
 ```bash
-python qwen_assistant.py
+python workspaceai.py
 ```
 
 ### Chat Interface Commands
@@ -196,7 +196,7 @@ ollama serve                 # Start Ollama service (if needed)
 - Smart context: Previous context automatically loaded into new chats
 
 ### Memory Storage:
-- Location: `./QwenAssistant/memory/memory.json` (next to script)
+- Location: `./WorkspaceAI/memory/memory.json` (next to script)
 - No manual management required - fully automatic
 - Intelligent summarization maintains context without token bloat
 
@@ -285,7 +285,7 @@ install: Discord                         # Get installation commands
 
 ## Configuration
 
-The assistant auto-creates `QwenAssistant/config.json` with these settings:
+The assistant auto-creates `WorkspaceAI/config.json` with these settings:
 
 ```json
 {
@@ -311,7 +311,7 @@ The application uses centralized constants for better maintainability:
 
 ## Key Benefits
 
-1. **Single File Architecture**: Everything you need in one `qwen_assistant.py` file
+1. **Single File Architecture**: Everything you need in one `workspaceai.py` file
 2. **Auto-Configuration**: Creates folders and config automatically - no setup required
 3. **Portable Design**: Put anywhere, works everywhere - no hardcoded paths
 4. **Direct Interface**: Starts immediately in classic chat mode - no menu delays
@@ -332,7 +332,7 @@ The application uses centralized constants for better maintainability:
 - All file operations are contained within the workspace directory for security
 - Progress indicators show for long operations like file searches and backups
 - Use `/tools` to see all available file management functions
-- Comprehensive logging helps with debugging (check QwenAssistant/qwen_assistant.log)
+- Comprehensive logging helps with debugging (check WorkspaceAI/workspaceai.log)
 - Network operations include automatic retry logic with exponential backoff
 - Input validation prevents path traversal and filename security issues
 

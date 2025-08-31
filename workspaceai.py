@@ -1,12 +1,12 @@
 
 #!/usr/bin/env python3
 """
-Qwen with Rolling Memory + Supreme File Management (Cross-Platform)
+WorkspaceAI - AI Assistant with Rolling Memory + File Management (Cross-Platform)
 Enhanced chat with persistent memory across sessions
 
 Version: 2.2
 Author: Grandpaul
-Updated: August 30, 2025
+Updated: August 31, 2025
 Features: Rolling memory, file management, software installation commands, Windows/Linux support
 """
 
@@ -80,7 +80,7 @@ def setup_logging():
     """Setup logging with proper file location from hardcoded paths"""
     log_dir = os.path.dirname(get_config_path())
     os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, 'qwen_assistant.log')
+    log_file = os.path.join(log_dir, 'workspaceai.log')
     logging.getLogger().handlers.clear()
     logging.basicConfig(
         level=logging.INFO,
@@ -91,7 +91,7 @@ def setup_logging():
         ],
         force=True
     )
-    return logging.getLogger('QwenAssistant')
+    return logging.getLogger('WorkspaceAI')
 
 # Configuration Management
 def get_script_directory():
@@ -100,15 +100,15 @@ def get_script_directory():
 
 def get_workspace_path():
     """Get the hardcoded workspace path"""
-    return os.path.join(get_script_directory(), "QwenAssistant", "workspace")
+    return os.path.join(get_script_directory(), "WorkspaceAI", "workspace")
 
 def get_memory_path():
     """Get the hardcoded memory path"""
-    return os.path.join(get_script_directory(), "QwenAssistant", "memory")
+    return os.path.join(get_script_directory(), "WorkspaceAI", "memory")
 
 def get_config_path():
     """Get the hardcoded config path"""
-    return os.path.join(get_script_directory(), "QwenAssistant", "config.json")
+    return os.path.join(get_script_directory(), "WorkspaceAI", "config.json")
 
 def get_default_config():
     """Get default configuration settings"""
@@ -215,7 +215,7 @@ logger = setup_logging()
 
 # File Manager Class - Built into single file
 class FileManager:
-    """File management tools integrated directly into Qwen assistant"""
+    """File management tools integrated directly into WorkspaceAI assistant"""
     
     def __init__(self, config=None):
         if config is None:
@@ -1099,7 +1099,7 @@ def get_all_tool_schemas():
                 }
             }
         }
-        # File management tools ready for Qwen 2.5:3B
+        # File management tools ready for WorkspaceAI
     ]
 
 def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: bool = True):
@@ -1491,7 +1491,7 @@ def generate_install_commands(software, method="auto"):
 def interactive_mode():
     """Interactive chat mode with rolling memory"""
     print("\n" + "="*70)
-    print("Qwen Assistant v2.2")
+    print("WorkspaceAI v2.2")
     print("="*70)
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
@@ -1522,7 +1522,7 @@ def interactive_mode():
         try:
             prompt = input(f"\nYou: ").strip()
             if prompt.lower() in ['exit', 'quit', 'q']:
-                print("Exiting Qwen Assistant.")
+                print("Exiting WorkspaceAI.")
                 logger.info("User exited application")
                 # Move current conversation to recent before exiting
                 if memory.current_conversation:
@@ -1719,16 +1719,16 @@ def main():
     """Setup and start enhanced interactive mode"""
     global file_manager, memory, logger
     
-    print("🚀 Initializing Qwen Assistant...")
+    print("Initializing WorkspaceAI...")
     
     # Ensure config is saved if this is first run
     if not os.path.exists(get_config_path()):
         save_config(APP_CONFIG)
-        print("✅ Created default configuration")
+        print("Created default configuration")
     
     # Reconfigure logging with proper location
     logger = setup_logging()
-    logger.info("Qwen Assistant starting up")
+    logger.info("WorkspaceAI starting up")
     
     # Initialize managers
     file_manager = FileManager()

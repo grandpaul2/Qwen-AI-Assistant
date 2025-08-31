@@ -1,9 +1,9 @@
 #!/bin/bash
-# Qwen Assistant Linux Installation Script
+# WorkspaceAI Linux Installation Script
 # Usage: chmod +x install_linux.sh && ./install_linux.sh
 
-echo "Qwen Assistant Linux Setup v2.2"
-echo "================================"
+echo "WorkspaceAI Linux Setup v2.2"
+echo "============================="
 
 # Function to detect package manager
 detect_package_manager() {
@@ -134,9 +134,9 @@ echo ""
 echo "Setup complete! Next steps:"
 echo "1. Start Ollama service: ollama serve"
 echo "2. Pull Qwen model: ollama pull qwen2.5:3b"  
-echo "3. Run assistant: python3 qwen_assistant.py"
+echo "3. Run assistant: python3 workspaceai.py"
 echo ""
-echo "The assistant will create a QwenAssistant/ directory with:"
+echo "The assistant will create a WorkspaceAI/ directory with:"
 echo "   workspace/  - Your secure file operations area"
 echo "   memory/     - Persistent conversation history"
 echo "   config.json - Settings and preferences"
