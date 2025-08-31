@@ -1,4 +1,4 @@
-# 🤖 Qwen Assistant v2.2 (Cross-Platform)
+# 🤖 Qwen Assistant v2.2 (Cross-Platform) - Enhanced Edition
 
 A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management capabilities and persistent memory - **works on Windows and Linux!**
 
@@ -15,7 +15,7 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 - **Format-Specific Writing**: Dedicated .txt, .md, .json file creation
 - **Advanced Features**: Search, compression, backup, JSON handling, folder copying
 - **Safety Mode**: Prevents destructive operations
-- **Smart Path Resolution**: Configurable base directory
+- **Smart Path Resolution**: Configurable base directory with pathlib security
 
 ### 📦 **Software Installation Helper**
 - **Multiple Methods**: Winget, direct downloads, pip, docker
@@ -28,10 +28,11 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 - **Smart Package Detection**: Auto-detects available package managers (apt, dnf, pacman, etc.)
 - **Network Resilience**: Automatic retry logic with exponential backoff
 - **Comprehensive Logging**: Detailed logs saved to QwenAssistant/qwen_assistant.log
-- **Input Validation**: Platform-aware filename sanitization and path traversal protection
+- **Enhanced Security**: Path traversal protection using pathlib, subprocess instead of os.system
 - **Error Recovery**: Graceful failure handling with informative messages
-- **Configuration Backup**: Automatic config backups before changes
+- **Configuration Management**: Centralized constants, automatic config backups
 - **Memory Safety**: Atomic file operations for conversation persistence
+- **Unicode Support**: Proper UTF-8 handling throughout the application
 
 ### 🎯 **User Experience**
 - **Auto-Detection**: Smart keyword-based tool triggering
@@ -76,6 +77,7 @@ python qwen_assistant.py
 chmod +x install_linux.sh
 ./install_linux.sh
 ```
+*Enhanced script with improved error handling, package manager detection, and troubleshooting tips*
 
 #### 2. **Manual Setup**
 ```bash
@@ -87,7 +89,7 @@ sudo dnf install python3 python3-pip  # Fedora
 sudo pacman -S python python-pip      # Arch Linux
 
 # Install dependencies
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --user
 
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -100,7 +102,31 @@ ollama pull qwen2.5:3b
 python3 qwen_assistant.py
 ```
 
-*Starts directly in chat mode - no menu system. Auto-creates QwenAssistant folder with outputs, memory, and config on first run*
+*Starts directly in chat mode - auto-creates QwenAssistant folder with outputs, memory, and config on first run*
+
+## 🔧 **Recent Improvements (v2.2 Enhanced)**
+
+### **Security Enhancements**
+- **Path Security**: Replaced manual path validation with `pathlib.Path.relative_to()` for robust security
+- **Command Injection Prevention**: Replaced `os.system()` with `subprocess.run()` for safe command execution
+- **Input Validation**: Enhanced filename validation with platform-specific checks
+
+### **Configuration Management**
+- **Centralized Constants**: All magic numbers moved to `CONSTANTS` dictionary
+- **Configurable Timeouts**: API timeouts, retry counts, and limits now configurable
+- **Version Management**: Consistent version handling throughout
+
+### **Error Handling & Reliability**
+- **Improved File Operations**: Better directory creation with safety checks
+- **Unicode Support**: Proper UTF-8 encoding for international characters
+- **Network Resilience**: Enhanced retry logic with exponential backoff
+- **Memory Threading**: Safer memory operations with better error recovery
+
+### **Installation Script Improvements**
+- **Enhanced Linux Script**: Better package manager detection and error handling
+- **Dependency Management**: Automatic requirements.txt creation if missing
+- **User-Friendly**: Improved feedback and troubleshooting tips
+- **Root Detection**: Warns when running as root user
 
 ## 📂 Directory Structure
 ```
@@ -263,7 +289,7 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 
 ```json
 {
-  "version": "2.1",
+  "version": "2.2",
   "paths": {
     "outputs": "./QwenAssistant/outputs",
     "memory": "./QwenAssistant/memory"
@@ -271,12 +297,21 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
   "settings": {
     "model": "qwen2.5:3b",
     "safe_mode": true,
-    "ollama_host": "localhost:11434"
+    "ollama_host": "localhost:11434",
+    "search_max_file_kb": 1024
   }
 }
 ```
 
 **To change settings:** Use `/config` command during chat
+
+### **Configuration Constants**
+The application now uses centralized constants for better maintainability:
+- `API_TIMEOUT`: 30 seconds
+- `API_MAX_RETRIES`: 3 attempts  
+- `MAX_RECENT_CONVERSATIONS`: 2
+- `MAX_SUMMARIZED_CONVERSATIONS`: 8
+- `MAX_FILENAME_LENGTH`: 255 characters
 
 ## 🏆 What Makes This Special
 
@@ -298,10 +333,11 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 - ✅ **Cross-Platform**: Works on Windows and Linux
 - ✅ **Auto-Setup**: Creates folders and config automatically
 - ✅ **Smart Package Detection**: Auto-detects Linux package managers
-- ✅ **Dependency Management**: Simple requirements.txt for easy setup
+- ✅ **Enhanced Security**: Path traversal protection, subprocess usage, input validation
 - ✅ **Robust Error Handling**: Comprehensive logging and recovery
-- ✅ **Security Built-in**: Platform-aware input validation and path protection
-- ✅ **User-Friendly**: Startup menu and configuration options
+- ✅ **Centralized Configuration**: Constants dictionary for easy maintenance
+- ✅ **Unicode Support**: Proper UTF-8 encoding throughout
+- ✅ **User-Friendly**: Improved installation script and troubleshooting
 - ✅ **Easier Updates**: Modify one file to change everything
 - ✅ **Simpler Backup**: Just backup qwen_assistant.py and QwenAssistant folder
 
@@ -320,6 +356,12 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 
 ## 📈 Version History
 
+- **v2.2 Enhanced**: Major security and reliability improvements
+  - Enhanced path security using pathlib
+  - Replaced os.system with subprocess for security
+  - Centralized configuration constants
+  - Improved error handling and Unicode support
+  - Enhanced Linux installation script
 - **v2.2**: Cross-platform support (Windows/Linux), smart package manager detection, platform-aware validation
 - **v2.1.1**: Enhanced error handling, logging system, security improvements, dependency management
 - **v2.1**: Configuration system, portable design, startup menu, auto-folder creation

@@ -22,6 +22,8 @@ import logging
 import hashlib
 import zipfile
 import tarfile
+import subprocess
+from pathlib import Path
 from collections import defaultdict
 from typing import Optional, List, Union, Dict, Any
 
@@ -53,6 +55,20 @@ except ImportError:
     
     # Use fallback
     tqdm = TqdmFallback
+
+# Configuration constants
+CONSTANTS = {
+    'API_TIMEOUT': 30,
+    'API_MAX_RETRIES': 3,
+    'SUMMARY_TIMEOUT': 10,
+    'MEMORY_CONTEXT_MESSAGES': 10,
+    'MAX_RECENT_CONVERSATIONS': 2,
+    'MAX_SUMMARIZED_CONVERSATIONS': 8,
+    'MAX_FILENAME_LENGTH': 255,
+    'PROGRESS_DURATION': 2,
+    'SEARCH_MAX_FILE_KB': 1024,
+    'VERSION': "2.2"
+}
 
 # Configure logging (will be updated after config is loaded)
 def setup_logging(config=None):
@@ -93,7 +109,7 @@ def get_default_config():
     """Get default configuration settings"""
     script_dir = get_script_directory()
     return {
-        "version": "2.1",
+        "version": CONSTANTS['VERSION'],
         "paths": {
             "outputs": os.path.join(script_dir, "QwenAssistant", "outputs"),
             "memory": os.path.join(script_dir, "QwenAssistant", "memory"),
@@ -106,7 +122,7 @@ def get_default_config():
             "compress_format": "zip",
             "search_case_sensitive": False,
             "search_content": True,
-            "search_max_file_kb": 1024
+            "search_max_file_kb": CONSTANTS['SEARCH_MAX_FILE_KB']
         }
     }
 
@@ -214,29 +230,29 @@ class FileManager:
         os.makedirs(self.base_path, exist_ok=True)
 
     def _resolve(self, path: Optional[str], *parts: str) -> str:
-        """Join base_path with parts and validate for security"""
-        root = path if path else self.base_path
-        full_path = os.path.join(root, *[p for p in parts if p])
+        """Join base_path with parts and validate for security using pathlib"""
+        root = Path(path) if path else Path(self.base_path)
         
-        # Normalize path to prevent directory traversal
-        full_path = os.path.normpath(full_path)
+        # Build the full path
+        if parts:
+            full_path = root / Path(*[p for p in parts if p])
+        else:
+            full_path = root
+        
+        # Resolve to absolute path and normalize
+        full_path = full_path.resolve()
         
         # Security check: ensure path doesn't escape base directory
         if not path:  # Only check if using base_path
             try:
-                # Get absolute paths for comparison
-                abs_base = os.path.abspath(self.base_path)
-                abs_full = os.path.abspath(full_path)
-                
+                base_path = Path(self.base_path).resolve()
                 # Check if the resolved path is within the base directory
-                if not abs_full.startswith(abs_base + os.sep) and abs_full != abs_base:
-                    logger.warning(f"Path traversal attempt blocked: {full_path}")
-                    raise ValueError(f"Path '{full_path}' is outside the allowed directory")
-            except Exception as e:
-                logger.error(f"Path validation error: {e}")
-                raise ValueError(f"Invalid path: {full_path}")
+                full_path.relative_to(base_path)
+            except ValueError:
+                logger.warning(f"Path traversal attempt blocked: {full_path}")
+                raise ValueError(f"Path '{full_path}' is outside the allowed directory")
         
-        return full_path
+        return str(full_path)
 
     def _validate_filename(self, filename: str) -> None:
         """Validate filename for security and filesystem compatibility"""
@@ -258,9 +274,9 @@ class FileManager:
             if '\0' in filename:
                 raise ValueError("Filename cannot contain null character")
         
-        # Check length (common to all platforms)
-        if len(filename) > 255:
-            raise ValueError("Filename too long (max 255 characters)")
+        # Check length
+        if len(filename) > CONSTANTS['MAX_FILENAME_LENGTH']:
+            raise ValueError(f"Filename too long (max {CONSTANTS['MAX_FILENAME_LENGTH']} characters)")
 
     def _guard_overwrite(self, path: str) -> Optional[str]:
         """Check safe mode for overwriting files"""
@@ -280,7 +296,7 @@ class FileManager:
             
             # Ensure directory exists
             dir_path = os.path.dirname(file_path)
-            if dir_path:
+            if dir_path:  # Only create directory if there is one
                 os.makedirs(dir_path, exist_ok=True)
             
             with open(file_path, "w", encoding="utf-8") as file:
@@ -315,7 +331,9 @@ class FileManager:
         if guard_result:
             return guard_result
         try:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            dir_path = os.path.dirname(file_path)
+            if dir_path:  # Only create directory if there is one
+                os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(content)
             return f"Content written to '{file_name}' successfully!"
@@ -390,7 +408,9 @@ class FileManager:
         if guard_result:
             return guard_result
         try:
-            os.makedirs(os.path.dirname(dest_file_path), exist_ok=True)
+            dest_dir = os.path.dirname(dest_file_path)
+            if dest_dir:  # Only create directory if there is one
+                os.makedirs(dest_dir, exist_ok=True)
             shutil.copy2(src_file_path, dest_file_path)
             return f"File '{src_file}' copied to '{dest_file}' successfully!"
         except Exception as e:
@@ -404,7 +424,9 @@ class FileManager:
         if guard_result:
             return guard_result
         try:
-            os.makedirs(os.path.dirname(dest_file_path), exist_ok=True)
+            dest_dir = os.path.dirname(dest_file_path)
+            if dest_dir:  # Only create directory if there is one
+                os.makedirs(dest_dir, exist_ok=True)
             shutil.move(src_file_path, dest_file_path)
             return f"File '{src_file}' moved to '{dest_file}' successfully!"
         except Exception as e:
@@ -501,9 +523,11 @@ class FileManager:
         if guard_result:
             return guard_result
         try:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            dir_path = os.path.dirname(file_path)
+            if dir_path:  # Only create directory if there is one
+                os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
-                json.dump(content, file, indent=4)
+                json.dump(content, file, indent=4, ensure_ascii=False)
             return f"JSON written to '{file_name}' successfully!"
         except Exception as e:
             return f"Error writing JSON: {e}"
@@ -640,7 +664,7 @@ class MemoryManager:
         self.recent_conversations.insert(0, conversation_data)
         
         # Keep only last 2 recent conversations
-        if len(self.recent_conversations) > 2:
+        if len(self.recent_conversations) > CONSTANTS['MAX_RECENT_CONVERSATIONS']:
             # Move oldest recent to summarized
             oldest = self.recent_conversations.pop()
             summary = self.summarize_conversation(oldest['messages'])
@@ -650,7 +674,7 @@ class MemoryManager:
             })
         
         # Keep only 8 summarized conversations
-        self.summarized_conversations = self.summarized_conversations[:8]
+        self.summarized_conversations = self.summarized_conversations[:CONSTANTS['MAX_SUMMARIZED_CONVERSATIONS']]
         
         # Clear current conversation
         self.current_conversation = []
@@ -662,7 +686,7 @@ class MemoryManager:
         try:
             # Build summary prompt
             conversation_text = ""
-            for msg in messages[-10:]:  # Last 10 messages only
+            for msg in messages[-CONSTANTS['MEMORY_CONTEXT_MESSAGES']:]:  # Last 10 messages only
                 if msg['role'] in ['user', 'assistant']:
                     conversation_text += f"{msg['role']}: {msg['content'][:200]}\n"
             
@@ -675,7 +699,7 @@ class MemoryManager:
                 "model": "qwen2.5:3b",
                 "messages": [{"role": "user", "content": summary_prompt}],
                 "stream": False
-            }, timeout=10)
+            }, timeout=CONSTANTS['SUMMARY_TIMEOUT'])
             
             if response.status_code == 200:
                 return response.json()["message"]["content"]
@@ -731,27 +755,32 @@ def detect_linux_package_manager():
     
     # Check for package managers in order of preference
     managers = [
-        ("apt", "apt --version"),
-        ("dnf", "dnf --version"), 
-        ("yum", "yum --version"),
-        ("pacman", "pacman --version"),
-        ("zypper", "zypper --version"),
-        ("snap", "snap --version")
+        ("apt", ["apt", "--version"]),
+        ("dnf", ["dnf", "--version"]), 
+        ("yum", ["yum", "--version"]),
+        ("pacman", ["pacman", "--version"]),
+        ("zypper", ["zypper", "--version"]),
+        ("snap", ["snap", "--version"])
     ]
     
     for manager, command in managers:
         try:
             # Try to run the version command to see if manager exists
-            result = os.system(f"{command} >/dev/null 2>&1")
-            if result == 0:  # Command succeeded
+            result = subprocess.run(command, 
+                                  stdout=subprocess.DEVNULL, 
+                                  stderr=subprocess.DEVNULL,
+                                  timeout=5)
+            if result.returncode == 0:  # Command succeeded
                 return manager
-        except:
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             continue
     
     return "unknown"
 
-def show_progress(description, duration=2):
+def show_progress(description, duration=None):
     """Show progress bar for operations"""
+    if duration is None:
+        duration = CONSTANTS['PROGRESS_DURATION']
     with tqdm(total=100, desc=description, ncols=70, bar_format='{desc}: {percentage:3.0f}%|{bar}|') as pbar:
         for i in range(100):
             time.sleep(duration/100)
@@ -1105,8 +1134,8 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     
     # Ollama API call with timeout and retry logic
     host = APP_CONFIG['settings']['ollama_host']
-    max_retries = 3
-    timeout = 30
+    max_retries = CONSTANTS['API_MAX_RETRIES']
+    timeout = CONSTANTS['API_TIMEOUT']
     response = None
     
     for attempt in range(max_retries):
@@ -1572,7 +1601,7 @@ def test_ollama_connection():
     try:
         logger.info("Testing Ollama connection...")
         host = APP_CONFIG['settings']['ollama_host']
-        response = requests.get(f"http://{host}/api/tags", timeout=10)
+        response = requests.get(f"http://{host}/api/tags", timeout=CONSTANTS['SUMMARY_TIMEOUT'])
         
         if response.status_code == 200:
             models = response.json().get('models', [])
@@ -1594,7 +1623,7 @@ def test_ollama_connection():
             
     except requests.exceptions.Timeout:
         logger.error("Ollama connection timeout")
-        print("❌ Ollama connection timeout (10s)")
+        print(f"❌ Ollama connection timeout ({CONSTANTS['SUMMARY_TIMEOUT']}s)")
         print("💡 Make sure Ollama is running: ollama serve")
         return False
         
