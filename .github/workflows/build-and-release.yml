@@ -78,6 +78,7 @@ jobs:
         name: Qwen-AI-Assistant ${{ steps.tag.outputs.TAG_NAME }}
         draft: false
         prerelease: false
+        generate_release_notes: true
         body: |
           # Qwen-AI-Assistant ${{ steps.tag.outputs.TAG_NAME }}
           
@@ -85,10 +86,6 @@ jobs:
           - **Windows**: Download `Qwen-AI-Assistant-windows.exe` 
           - **Linux**: Download `Qwen-AI-Assistant-linux` (make executable with `chmod +x`)
           - **Linux (Source)**: Use the existing `install_linux.sh` script
-          
-          ## Changes
-          - Built from commit ${{ github.sha }}
-          - Cross-platform executables built with PyInstaller
           
           ## Usage
           ### Windows
