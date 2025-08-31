@@ -1,0 +1,14 @@
+# Added comment line to force file update
+name: Test Tag Workflow
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo tag info
+        run: echo "Tag workflow triggered! Ref: ${{ github.ref }}"

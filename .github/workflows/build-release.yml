@@ -1,0 +1,70 @@
+name: Build and Release Qwen-AI-Assistant
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            executable_name: Qwen-AI-Assistant.exe
+            asset_name: Qwen-AI-Assistant-windows.exe
+          - os: ubuntu-latest
+            executable_name: Qwen-AI-Assistant
+            asset_name: Qwen-AI-Assistant-linux
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --console qwen_assistant.py --name Qwen-AI-Assistant
+
+    - name: Rename output for Windows
+      if: matrix.os == 'windows-latest'
+      run: mv dist/Qwen-AI-Assistant.exe dist/Qwen-AI-Assistant-windows.exe
+
+    - name: Rename output for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: mv dist/Qwen-AI-Assistant dist/Qwen-AI-Assistant-linux
+
+    - name: Upload Artifact (optional)
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: dist/${{ matrix.asset_name }}
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        name: Qwen-AI-Assistant ${{ github.ref_name }}
+        body: |
+          ## Qwen-AI-Assistant ${{ github.ref_name }}
+          
+          **Download for your platform:**
+          - Windows: `Qwen-AI-Assistant-windows.exe`
+          - Linux: `Qwen-AI-Assistant-linux` (run `chmod +x Qwen-AI-Assistant-linux` first)
+          
+          Built from commit ${{ github.sha }}
+        files: |
+          dist/${{ matrix.asset_name }}

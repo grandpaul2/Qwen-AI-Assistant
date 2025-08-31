@@ -1,0 +1,13 @@
+name: Tag Workflow Test
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag trigger
+        run: echo "Triggered by tag!"
