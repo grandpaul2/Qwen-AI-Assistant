@@ -45,7 +45,10 @@ ehthumbs.db
 Thumbs.db
 
 # Assistant specific
-# Memory files (comment out if you want to track memory)
+# QwenAssistant user data folder (contains configs, memory, logs, outputs)
+QwenAssistant/
+
+# Legacy memory files (comment out if you want to track memory)
 memory.json
 *.memory
 .ollama/memory/
