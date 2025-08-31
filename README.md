@@ -47,7 +47,7 @@ pip install requests tqdm
 ```bash
 python qwen_assistant.py
 ```
-*On first run, automatically creates QwenAssistant folder with outputs, memory, and config*
+*Starts directly in chat mode - no menu system. Auto-creates QwenAssistant folder with outputs, memory, and config on first run*
 
 ## 📂 Directory Structure
 ```
@@ -76,17 +76,11 @@ python qwen_assistant.py
 
 ### **Chat Interface Commands**
 
-#### Startup Menu:
-```bash
-[1] Start Assistant
-[2] Configure Settings
-[3] Exit
-```
-
 #### Bot Control:
 ```bash
 /new                         # Start new conversation (saves current to memory)
 /memory                      # Show memory status and statistics  
+/config                      # Configure settings (paths, model, etc.)
 /reset                       # Clear all conversation memory
 exit                         # Quit chat (auto-saves current conversation)
 ```
@@ -221,17 +215,17 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 }
 ```
 
-**To change settings:** Use option [2] from the startup menu
+**To change settings:** Use `/config` command during chat
 
 ## 🏆 What Makes This Special
 
 1. **Single File Architecture**: Everything you need in one `qwen_assistant.py` file
 2. **Auto-Configuration**: Creates folders and config automatically - no setup required
 3. **Portable Design**: Put anywhere, works everywhere - no hardcoded paths
-4. **Persistent AI Memory**: Unlike standard chat sessions, maintains context across restarts
-5. **Hybrid Intelligence**: Combines AI reasoning with programmatic file operations
-6. **Safety First**: Built-in protections prevent accidental data loss
-7. **User-Friendly**: Startup menu and configuration system
+4. **Direct Interface**: Starts immediately in classic chat mode - no menu delays
+5. **Persistent AI Memory**: Unlike standard chat sessions, maintains context across restarts
+6. **Hybrid Intelligence**: Combines AI reasoning with programmatic file operations
+7. **Safety First**: Built-in protections prevent accidental data loss
 8. **Self-Contained**: No external services required beyond Ollama
 
 ## 🎯 Single File Benefits
