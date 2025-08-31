@@ -245,11 +245,11 @@ class FileManager:
         # Ensure base directory exists
         os.makedirs(self.base_path, exist_ok=True)
 
-    def _resolve(self, path: Optional[str], *parts: str) -> str:
-        """Join base_path with parts and validate for security using pathlib"""
-        root = Path(path) if path else Path(self.base_path)
+    def _resolve(self, *parts: str) -> str:
+        """Join workspace base_path with parts and validate for security using pathlib"""
+        root = Path(self.base_path)
         
-        # Build the full path
+        # Build the full path within workspace
         if parts:
             full_path = root / Path(*[p for p in parts if p])
         else:
@@ -258,15 +258,14 @@ class FileManager:
         # Resolve to absolute path and normalize
         full_path = full_path.resolve()
         
-        # Security check: ensure path doesn't escape base directory
-        if not path:  # Only check if using base_path
-            try:
-                base_path = Path(self.base_path).resolve()
-                # Check if the resolved path is within the base directory
-                full_path.relative_to(base_path)
-            except ValueError:
-                logger.warning(f"Path traversal attempt blocked: {full_path}")
-                raise ValueError(f"Path '{full_path}' is outside the allowed directory")
+        # Security check: ensure path doesn't escape workspace directory
+        try:
+            base_path = Path(self.base_path).resolve()
+            # Check if the resolved path is within the workspace directory
+            full_path.relative_to(base_path)
+        except ValueError:
+            logger.warning(f"Path traversal attempt blocked: {full_path}")
+            raise ValueError(f"Path '{full_path}' is outside the workspace directory")
         
         return str(full_path)
 
@@ -300,11 +299,11 @@ class FileManager:
             return "Safe mode is ON: operation would overwrite an existing file."
         return None
 
-    def create_file(self, file_name: str, content: str = "", path: Optional[str] = None) -> str:
-        """Create a new file with content"""
+    def create_file(self, file_name: str, content: str = "") -> str:
+        """Create a new file with content in workspace"""
         try:
             self._validate_filename(os.path.basename(file_name))
-            file_path = self._resolve(path, file_name)
+            file_path = self._resolve(file_name)
             
             guard_result = self._guard_overwrite(file_path)
             if guard_result:
@@ -319,7 +318,7 @@ class FileManager:
                 file.write(content)
             
             logger.info(f"Created file: {file_path}")
-            return f"File '{file_name}' created successfully!"
+            return f"File '{file_name}' created successfully in workspace!"
             
         except ValueError as e:
             logger.error(f"Validation error creating file '{file_name}': {e}")
@@ -331,18 +330,18 @@ class FileManager:
             logger.error(f"Unexpected error creating file '{file_name}': {e}")
             return f"Error creating file: {e}"
 
-    def read_file(self, file_name: str, path: Optional[str] = None) -> str:
-        """Read file contents"""
-        file_path = self._resolve(path, file_name)
+    def read_file(self, file_name: str) -> str:
+        """Read file contents from workspace"""
+        file_path = self._resolve(file_name)
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
                 return file.read()
         except Exception as e:
             return f"Error reading file: {e}"
 
-    def write_to_file(self, file_name: str, content: str, path: Optional[str] = None) -> str:
-        """Write content to file"""
-        file_path = self._resolve(path, file_name)
+    def write_to_file(self, file_name: str, content: str) -> str:
+        """Write content to file in workspace"""
+        file_path = self._resolve(file_name)
         guard_result = self._guard_overwrite(file_path)
         if guard_result:
             return guard_result
@@ -352,54 +351,58 @@ class FileManager:
                 os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(content)
-            return f"Content written to '{file_name}' successfully!"
+            return f"Content written to '{file_name}' successfully in workspace!"
         except Exception as e:
             return f"Error writing file: {e}"
 
-    def delete_file(self, file_name: str, path: Optional[str] = None) -> str:
-        """Delete a file"""
+    def delete_file(self, file_name: str) -> str:
+        """Delete a file from workspace"""
         if self.safe_mode:
             return "Safe mode is ON: delete_file is disabled."
-        file_path = self._resolve(path, file_name)
+        file_path = self._resolve(file_name)
         try:
             os.remove(file_path)
-            return f"File '{file_name}' deleted successfully!"
+            return f"File '{file_name}' deleted successfully from workspace!"
         except Exception as e:
             return f"Error deleting file: {e}"
 
-    def list_files(self, path: Optional[str] = None) -> str:
-        """List files in directory"""
-        directory_path = path if path else self.base_path
+    def list_files(self, subdirectory: str = "") -> str:
+        """List files in workspace directory or subdirectory"""
         try:
+            if subdirectory:
+                directory_path = self._resolve(subdirectory)
+            else:
+                directory_path = self.base_path
             files = os.listdir(directory_path)
-            return "Files in directory:\n" + "\n".join(files)
+            location = f"workspace/{subdirectory}" if subdirectory else "workspace"
+            return f"Files in {location}:\n" + "\n".join(files)
         except Exception as e:
             return f"Error listing files: {e}"
 
-    def create_folder(self, folder_name: str, path: Optional[str] = None) -> str:
-        """Create a new folder"""
-        folder_path = self._resolve(path, folder_name)
+    def create_folder(self, folder_name: str) -> str:
+        """Create a new folder in workspace"""
+        folder_path = self._resolve(folder_name)
         try:
             os.makedirs(folder_path, exist_ok=True)
-            return f"Folder '{folder_name}' created successfully!"
+            return f"Folder '{folder_name}' created successfully in workspace!"
         except Exception as e:
             return f"Error creating folder: {e}"
 
-    def delete_folder(self, folder_name: str, path: Optional[str] = None) -> str:
-        """Delete a folder"""
+    def delete_folder(self, folder_name: str) -> str:
+        """Delete a folder from workspace"""
         if self.safe_mode:
             return "Safe mode is ON: delete_folder is disabled."
-        folder_path = self._resolve(path, folder_name)
+        folder_path = self._resolve(folder_name)
         try:
             shutil.rmtree(folder_path)
-            return f"Folder '{folder_name}' deleted successfully!"
+            return f"Folder '{folder_name}' deleted successfully from workspace!"
         except Exception as e:
             return f"Error deleting folder: {e}"
 
-    def copy_folder(self, src_folder: str, dest_folder: str, src_path: Optional[str] = None, dest_path: Optional[str] = None) -> str:
-        """Copy a folder and all its contents"""
-        src_folder_path = self._resolve(src_path, src_folder)
-        dest_folder_path = self._resolve(dest_path, dest_folder)
+    def copy_folder(self, src_folder: str, dest_folder: str) -> str:
+        """Copy a folder and all its contents within workspace"""
+        src_folder_path = self._resolve(src_folder)
+        dest_folder_path = self._resolve(dest_folder)
         
         if not os.path.exists(src_folder_path):
             return f"Source folder '{src_folder}' does not exist."
@@ -412,14 +415,14 @@ class FileManager:
         
         try:
             shutil.copytree(src_folder_path, dest_folder_path)
-            return f"Folder '{src_folder}' copied to '{dest_folder}' successfully!"
+            return f"Folder '{src_folder}' copied to '{dest_folder}' successfully in workspace!"
         except Exception as e:
             return f"Error copying folder: {e}"
 
-    def copy_file(self, src_file: str, dest_file: str, src_path: Optional[str] = None, dest_path: Optional[str] = None) -> str:
-        """Copy a file"""
-        src_file_path = self._resolve(src_path, src_file)
-        dest_file_path = self._resolve(dest_path, dest_file)
+    def copy_file(self, src_file: str, dest_file: str) -> str:
+        """Copy a file within workspace"""
+        src_file_path = self._resolve(src_file)
+        dest_file_path = self._resolve(dest_file)
         guard_result = self._guard_overwrite(dest_file_path)
         if guard_result:
             return guard_result
@@ -428,14 +431,14 @@ class FileManager:
             if dest_dir:  # Only create directory if there is one
                 os.makedirs(dest_dir, exist_ok=True)
             shutil.copy2(src_file_path, dest_file_path)
-            return f"File '{src_file}' copied to '{dest_file}' successfully!"
+            return f"File '{src_file}' copied to '{dest_file}' successfully in workspace!"
         except Exception as e:
             return f"Error copying file: {e}"
 
-    def move_file(self, src_file: str, dest_file: str, src_path: Optional[str] = None, dest_path: Optional[str] = None) -> str:
-        """Move a file"""
-        src_file_path = self._resolve(src_path, src_file)
-        dest_file_path = self._resolve(dest_path, dest_file)
+    def move_file(self, src_file: str, dest_file: str) -> str:
+        """Move a file within workspace"""
+        src_file_path = self._resolve(src_file)
+        dest_file_path = self._resolve(dest_file)
         guard_result = self._guard_overwrite(dest_file_path)
         if guard_result:
             return guard_result
@@ -444,14 +447,17 @@ class FileManager:
             if dest_dir:  # Only create directory if there is one
                 os.makedirs(dest_dir, exist_ok=True)
             shutil.move(src_file_path, dest_file_path)
-            return f"File '{src_file}' moved to '{dest_file}' successfully!"
+            return f"File '{src_file}' moved to '{dest_file}' successfully in workspace!"
         except Exception as e:
             return f"Error moving file: {e}"
 
-    def search_files(self, keyword: str, path: Optional[str] = None) -> List[str]:
-        """Search for files by keyword"""
+    def search_files(self, keyword: str, subdirectory: str = "") -> List[str]:
+        """Search for files by keyword in workspace"""
         import fnmatch
-        search_path = path if path else self.base_path
+        if subdirectory:
+            search_path = self._resolve(subdirectory)
+        else:
+            search_path = self.base_path
         matching_files = []
         case_kw = keyword if self.search_case_sensitive else keyword.lower()
 
@@ -482,11 +488,11 @@ class FileManager:
         
         return matching_files
 
-    def compress_file(self, file_name: str, output_filename: str, format: Optional[str] = None, path: Optional[str] = None) -> str:
-        """Compress a file"""
+    def compress_file(self, file_name: str, output_filename: str, format: Optional[str] = None) -> str:
+        """Compress a file in workspace"""
         fmt = format or self.default_compress_format
-        file_path = self._resolve(path, file_name)
-        output_path = self._resolve(path, output_filename)
+        file_path = self._resolve(file_name)
+        output_path = self._resolve(output_filename)
         
         guard_result = self._guard_overwrite(output_path)
         if guard_result:
@@ -501,7 +507,7 @@ class FileManager:
             elif fmt == "gztar":
                 with tarfile.open(output_path, "w:gz") as tarf:
                     tarf.add(file_path, os.path.basename(file_path))
-            return f"File '{file_name}' compressed to '{output_filename}' as {fmt}."
+            return f"File '{file_name}' compressed to '{output_filename}' as {fmt} in workspace."
         except Exception as e:
             return f"Error compressing file: {e}"
 
@@ -523,18 +529,18 @@ class FileManager:
         except Exception as e:
             return f"Backup error: {e}"
 
-    def read_json_file(self, file_name: str, path: Optional[str] = None) -> Union[Dict[str, Any], str]:
-        """Read a JSON file"""
-        file_path = self._resolve(path, file_name)
+    def read_json_file(self, file_name: str) -> Union[Dict[str, Any], str]:
+        """Read a JSON file from workspace"""
+        file_path = self._resolve(file_name)
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 return json.load(file)
         except Exception as e:
             return f"Error reading JSON: {e}"
 
-    def write_json_file(self, file_name: str, content: Dict[str, Any], path: Optional[str] = None) -> str:
-        """Write data to JSON file"""
-        file_path = self._resolve(path, file_name)
+    def write_json_file(self, file_name: str, content: Dict[str, Any]) -> str:
+        """Write data to JSON file in workspace"""
+        file_path = self._resolve(file_name)
         guard_result = self._guard_overwrite(file_path)
         if guard_result:
             return guard_result
@@ -544,37 +550,37 @@ class FileManager:
                 os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(content, file, indent=4, ensure_ascii=False)
-            return f"JSON written to '{file_name}' successfully!"
+            return f"JSON written to '{file_name}' successfully in workspace!"
         except Exception as e:
             return f"Error writing JSON: {e}"
 
-    def write_txt_file(self, file_name: str, content: str, path: Optional[str] = None) -> str:
-        """Write content to a .txt file"""
+    def write_txt_file(self, file_name: str, content: str) -> str:
+        """Write content to a .txt file in workspace"""
         if not file_name.endswith('.txt'):
             file_name += '.txt'
-        return self.write_to_file(file_name, content, path)
+        return self.write_to_file(file_name, content)
 
-    def write_md_file(self, file_name: str, content: str, path: Optional[str] = None) -> str:
-        """Write content to a .md (markdown) file"""
+    def write_md_file(self, file_name: str, content: str) -> str:
+        """Write content to a .md (markdown) file in workspace"""
         if not file_name.endswith('.md'):
             file_name += '.md'
-        return self.write_to_file(file_name, content, path)
+        return self.write_to_file(file_name, content)
 
-    def write_json_from_string(self, file_name: str, content: str, path: Optional[str] = None) -> str:
-        """Write content to a .json file (string version for AI tools)"""
+    def write_json_from_string(self, file_name: str, content: str) -> str:
+        """Write content to a .json file (string version for AI tools) in workspace"""
         if not file_name.endswith('.json'):
             file_name += '.json'
         try:
             # Try to parse and format as JSON for better formatting
             parsed_content = json.loads(content)
-            return self.write_json_file(file_name, parsed_content, path)
+            return self.write_json_file(file_name, parsed_content)
         except json.JSONDecodeError:
             # If it's not valid JSON, write as-is but with .json extension
-            return self.write_to_file(file_name, content, path)
+            return self.write_to_file(file_name, content)
 
-    def get_file_metadata(self, file_name: str, path: Optional[str] = None) -> Union[Dict[str, str], str]:
-        """Get file metadata"""
-        file_path = self._resolve(path, file_name)
+    def get_file_metadata(self, file_name: str) -> Union[Dict[str, str], str]:
+        """Get file metadata from workspace"""
+        file_path = self._resolve(file_name)
         try:
             metadata = os.stat(file_path)
             return {
