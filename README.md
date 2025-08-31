@@ -43,20 +43,20 @@ ollama serve
 pip install requests tqdm
 ```
 
-### 4. **Start Assistant**
+### **3. Start Assistant**
 ```bash
-python qwen.py
+python qwen_assistant.py
 ```
+*On first run, automatically creates QwenAssistant folder with outputs, memory, and config*
 
 ## 📂 Directory Structure
 ```
-C:\Users\Grandpaul\Desktop\AI Work\Qwen\
-├── qwen.py                    # EVERYTHING in one file!
-├── .gitignore                 # Git ignore rules
-└── .ollama\
-    ├── outputs\               # File operations base directory
-    └── memory\
-        └── memory.json        # Persistent conversation memory
+[wherever you put the file]/
+├── qwen_assistant.py          # EVERYTHING in one file!
+└── QwenAssistant/            # Auto-created on first run
+    ├── outputs/              # File operations base directory
+    ├── memory/               # Persistent conversation memory
+    └── config.json          # User settings
 ```
 
 ## 🎛️ Command Reference
@@ -71,10 +71,17 @@ ollama run qwen2.5:3b
 
 #### Start Enhanced Chat:
 ```bash
-python qwen.py
+python qwen_assistant.py
 ```
 
 ### **Chat Interface Commands**
+
+#### Startup Menu:
+```bash
+[1] Start Assistant
+[2] Configure Settings
+[3] Exit
+```
 
 #### Bot Control:
 ```bash
@@ -113,7 +120,7 @@ ollama serve                 # Start Ollama service (if needed)
 - **Smart context:** Previous context automatically loaded into new chats
 
 ### **Memory Storage:**
-- Location: `C:\Users\Grandpaul\.ollama\memory\memory.json`
+- Location: `./QwenAssistant/memory/memory.json` (next to script)
 - No manual management required - fully automatic
 - Intelligent summarization maintains context without token bloat
 
@@ -197,34 +204,45 @@ tools: create file hello.txt            # Force file tools
 
 ## ⚙️ Configuration
 
-### **File Manager Settings** (in qwen.py around line 154)
-```python
-self.base_path = "C:\\Users\\Grandpaul\\.ollama\\outputs"
-self.safe_mode = True  # Prevents destructive operations
+The assistant auto-creates `QwenAssistant/config.json` with these settings:
+
+```json
+{
+  "version": "2.1",
+  "paths": {
+    "outputs": "./QwenAssistant/outputs",
+    "memory": "./QwenAssistant/memory"
+  },
+  "settings": {
+    "model": "qwen2.5:3b",
+    "safe_mode": true,
+    "ollama_host": "localhost:11434"
+  }
+}
 ```
 
-### **Memory Settings** (in qwen.py around line 400)
-```python
-MEMORY_FILE = r'C:\Users\Grandpaul\.ollama\memory\memory.json'
-```
+**To change settings:** Use option [2] from the startup menu
 
 ## 🏆 What Makes This Special
 
-1. **Single File Architecture**: Everything you need in one `qwen.py` file
-2. **No Import Dependencies**: File management built directly in
-3. **Persistent AI Memory**: Unlike standard chat sessions, maintains context across restarts
-4. **Hybrid Intelligence**: Combines AI reasoning with programmatic file operations
-5. **Safety First**: Built-in protections prevent accidental data loss
-6. **Production Ready**: Robust error handling, logging, and user feedback
-7. **Self-Contained**: No external services required beyond Ollama
+1. **Single File Architecture**: Everything you need in one `qwen_assistant.py` file
+2. **Auto-Configuration**: Creates folders and config automatically - no setup required
+3. **Portable Design**: Put anywhere, works everywhere - no hardcoded paths
+4. **Persistent AI Memory**: Unlike standard chat sessions, maintains context across restarts
+5. **Hybrid Intelligence**: Combines AI reasoning with programmatic file operations
+6. **Safety First**: Built-in protections prevent accidental data loss
+7. **User-Friendly**: Startup menu and configuration system
+8. **Self-Contained**: No external services required beyond Ollama
 
 ## 🎯 Single File Benefits
 
-- ✅ **Easy Deployment**: Just copy one file
-- ✅ **No Import Errors**: Everything is self-contained  
+- ✅ **Easy Deployment**: Just copy one file anywhere
+- ✅ **Auto-Setup**: Creates folders and config automatically
+- ✅ **Portable**: Works on any Windows machine with Python + Ollama
+- ✅ **No Import Errors**: Everything is self-contained
+- ✅ **User-Friendly**: Startup menu and configuration options
 - ✅ **Easier Updates**: Modify one file to change everything
-- ✅ **Simpler Backup**: Just backup qwen.py
-- ✅ **Portable**: Works anywhere Python + Ollama are installed
+- ✅ **Simpler Backup**: Just backup qwen_assistant.py and QwenAssistant folder
 
 ## 📋 Notes
 
@@ -237,7 +255,7 @@ MEMORY_FILE = r'C:\Users\Grandpaul\.ollama\memory\memory.json'
 
 ## 📈 Version History
 
-- **v2.1**: All-in-one architecture, enhanced command reference
+- **v2.1**: Configuration system, portable design, startup menu, auto-folder creation
 - **v2.0**: Rolling memory system, software installation database
 - **v1.1**: Added safety features, file management tools
 - **v1.0**: Basic chat with Ollama integration
