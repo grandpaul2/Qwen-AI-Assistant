@@ -28,10 +28,13 @@ from typing import Optional, List, Union, Dict, Any
 # Import tqdm with fallback
 try:
     from tqdm import tqdm
+    TQDM_AVAILABLE = True
 except ImportError:
+    TQDM_AVAILABLE = False
     print("Warning: tqdm not installed. Install with: pip install tqdm")
-    # Fallback progress bar
-    class tqdm:
+    
+    # Fallback progress bar class
+    class TqdmFallback:
         def __init__(self, total=100, desc="Progress", ncols=70, bar_format=None):
             self.total = total
             self.desc = desc
@@ -47,6 +50,9 @@ except ImportError:
             self.current += n
             if self.current % 20 == 0:  # Show progress every 20%
                 print(f"\r{self.desc}: {int(self.current/self.total*100)}%", end="", flush=True)
+    
+    # Use fallback
+    tqdm = TqdmFallback
 
 # Configure logging (will be updated after config is loaded)
 def setup_logging(config=None):
