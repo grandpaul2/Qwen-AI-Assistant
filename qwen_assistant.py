@@ -34,6 +34,12 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Optional, List, Union, Dict, Any
 
+# Suppress HTTP library logging noise
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 CONSTANTS = {
     'API_TIMEOUT': 30,
     'API_MAX_RETRIES': 3,
@@ -161,23 +167,6 @@ def setup_directories():
 
 
 # Setup logging (only after config is loaded)
-import subprocess
-from pathlib import Path
-from collections import defaultdict
-from typing import Optional, List, Union, Dict, Any
-
-CONSTANTS = {
-    'API_TIMEOUT': 30,
-    'API_MAX_RETRIES': 3,
-    'SUMMARY_TIMEOUT': 10,
-    'MEMORY_CONTEXT_MESSAGES': 10,
-    'MAX_RECENT_CONVERSATIONS': 2,
-    'MAX_SUMMARIZED_CONVERSATIONS': 8,
-    'MAX_FILENAME_LENGTH': 255,
-    'PROGRESS_DURATION': 2,
-    'SEARCH_MAX_FILE_KB': 1024,
-    'VERSION': "2.2"
-}
 
 def save_config(config):
     """Save configuration to file"""
@@ -649,7 +638,7 @@ class MemoryManager:
             else:
                 os.rename(temp_file, self.memory_file)
                 
-            logger.debug("Memory saved successfully")
+            logger.debug(f"Memory saved successfully - Current: {len(self.current_conversation)}, Recent: {len(self.recent_conversations)}, Summarized: {len(self.summarized_conversations)}")
             
         except (OSError, IOError) as e:
             logger.error(f"File system error saving memory: {e}")
@@ -670,13 +659,17 @@ class MemoryManager:
         
         self.current_conversation.append(message)
         
-        # Auto-save after each message
-        threading.Thread(target=self.save_memory, daemon=True).start()
+        # Auto-save after each message (synchronous for reliability)
+        self.save_memory()
+        logger.debug(f"Added {role} message to conversation, total messages: {len(self.current_conversation)}")
     
     def start_new_conversation(self):
         """Move current conversation to recent and start fresh"""
         if not self.current_conversation:
+            logger.debug("No current conversation to save")
             return
+        
+        logger.debug(f"Moving conversation with {len(self.current_conversation)} messages to recent")
         
         # Add current to recent conversations
         conversation_data = {
@@ -689,6 +682,7 @@ class MemoryManager:
         if len(self.recent_conversations) > CONSTANTS['MAX_RECENT_CONVERSATIONS']:
             # Move oldest recent to summarized
             oldest = self.recent_conversations.pop()
+            logger.debug(f"Moving oldest recent conversation to summarized (had {len(oldest['messages'])} messages)")
             summary = self.summarize_conversation(oldest['messages'])
             self.summarized_conversations.insert(0, {
                 'date': oldest['date'],
@@ -701,7 +695,8 @@ class MemoryManager:
         # Clear current conversation
         self.current_conversation = []
         self.save_memory()
-        print("Started new conversation (previous saved to memory)")
+        print(f"Started new conversation (previous conversation with {len(conversation_data['messages'])} messages saved to memory)")
+        logger.info(f"New conversation started - Recent: {len(self.recent_conversations)}, Summarized: {len(self.summarized_conversations)}")
     
     def summarize_conversation(self, messages):
         """Create AI summary of conversation"""
@@ -815,13 +810,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "create_file",
-                "description": "Create a new file with optional content",
+                "description": "Create a new file with optional content in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "Target file path"},
-                        "content": {"type": "string", "description": "Text content to write"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name or path within workspace (e.g., 'notes.txt' or 'folder/notes.txt')"},
+                        "content": {"type": "string", "description": "Text content to write"}
                     },
                     "required": ["file_name"]
                 }
@@ -831,12 +825,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "read_file",
-                "description": "Read the entire content of a text file",
+                "description": "Read the entire content of a text file from workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File path to read"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name or path within workspace"}
                     },
                     "required": ["file_name"]
                 }
@@ -846,13 +839,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "write_to_file",
-                "description": "Write text content to a file",
+                "description": "Write text content to a file in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File path to write"},
-                        "content": {"type": "string", "description": "Text content to write"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name or path within workspace"},
+                        "content": {"type": "string", "description": "Text content to write"}
                     },
                     "required": ["file_name", "content"]
                 }
@@ -862,11 +854,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "list_files",
-                "description": "List files in a directory",
+                "description": "List files in workspace directory or subdirectory",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "path": {"type": "string", "description": "Directory to list"}
+                        "subdirectory": {"type": "string", "description": "Subdirectory within workspace to list (optional, defaults to root)"}
                     }
                 }
             }
@@ -875,12 +867,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "create_folder",
-                "description": "Create a new folder",
+                "description": "Create a new folder in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "folder_name": {"type": "string", "description": "Name of the folder to create"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "folder_name": {"type": "string", "description": "Name or path of the folder to create within workspace"}
                     },
                     "required": ["folder_name"]
                 }
@@ -890,12 +881,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "delete_file",
-                "description": "Delete a file (blocked when safe_mode is True)",
+                "description": "Delete a file from workspace (blocked when safe_mode is True)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "Path to the file to delete"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "Name or path of the file to delete within workspace"}
                     },
                     "required": ["file_name"]
                 }
@@ -905,12 +895,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "delete_folder",
-                "description": "Delete a folder (blocked when safe_mode is True)",
+                "description": "Delete a folder from workspace (blocked when safe_mode is True)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "folder_name": {"type": "string", "description": "Name of the folder to delete"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "folder_name": {"type": "string", "description": "Name or path of the folder to delete within workspace"}
                     },
                     "required": ["folder_name"]
                 }
@@ -920,14 +909,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "copy_folder",
-                "description": "Copy a folder and all its contents to a new location",
+                "description": "Copy a folder and all its contents within workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "src_folder": {"type": "string", "description": "Name of the source folder to copy"},
-                        "dest_folder": {"type": "string", "description": "Name of the destination folder"},
-                        "src_path": {"type": "string", "description": "Override source working directory"},
-                        "dest_path": {"type": "string", "description": "Override destination working directory"}
+                        "src_folder": {"type": "string", "description": "Source folder name or path within workspace"},
+                        "dest_folder": {"type": "string", "description": "Destination folder name or path within workspace"}
                     },
                     "required": ["src_folder", "dest_folder"]
                 }
@@ -937,12 +924,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "search_files",
-                "description": "Search filenames and optionally contents for a keyword",
+                "description": "Search filenames and optionally contents for a keyword in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "keyword": {"type": "string", "description": "Keyword to search for"},
-                        "path": {"type": "string", "description": "Directory root to search"}
+                        "subdirectory": {"type": "string", "description": "Subdirectory within workspace to search (optional)"}
                     },
                     "required": ["keyword"]
                 }
@@ -952,14 +939,13 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "compress_file",
-                "description": "Compress a file using zip, tar, or gztar format",
+                "description": "Compress a file using zip, tar, or gztar format in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "Source file to compress"},
-                        "output_filename": {"type": "string", "description": "Output archive name"},
-                        "format": {"type": "string", "description": "zip | tar | gztar"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "Source file to compress within workspace"},
+                        "output_filename": {"type": "string", "description": "Output archive name within workspace"},
+                        "format": {"type": "string", "description": "zip | tar | gztar"}
                     },
                     "required": ["file_name", "output_filename"]
                 }
@@ -999,14 +985,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "copy_file",
-                "description": "Copy a file from source to destination",
+                "description": "Copy a file within the workspace folder from source to destination",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "src_file": {"type": "string", "description": "Source file name"},
-                        "dest_file": {"type": "string", "description": "Destination file name"},
-                        "src_path": {"type": "string", "description": "Source directory path"},
-                        "dest_path": {"type": "string", "description": "Destination directory path"}
+                        "src_file": {"type": "string", "description": "Source file name (workspace-only)"},
+                        "dest_file": {"type": "string", "description": "Destination file name (workspace-only)"}
                     },
                     "required": ["src_file", "dest_file"]
                 }
@@ -1016,14 +1000,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "move_file",
-                "description": "Move a file from source to destination",
+                "description": "Move a file within the workspace folder from source to destination",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "src_file": {"type": "string", "description": "Source file name"},
-                        "dest_file": {"type": "string", "description": "Destination file name"},
-                        "src_path": {"type": "string", "description": "Source directory path"},
-                        "dest_path": {"type": "string", "description": "Destination directory path"}
+                        "src_file": {"type": "string", "description": "Source file name (workspace-only)"},
+                        "dest_file": {"type": "string", "description": "Destination file name (workspace-only)"}
                     },
                     "required": ["src_file", "dest_file"]
                 }
@@ -1033,12 +1015,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "read_json_file",
-                "description": "Read and parse a JSON file",
+                "description": "Read and parse a JSON file from the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "JSON file name"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "JSON file name (workspace-only)"}
                     },
                     "required": ["file_name"]
                 }
@@ -1048,13 +1029,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "write_json_file",
-                "description": "Write data to a JSON file",
+                "description": "Write data to a JSON file in the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "JSON file name"},
-                        "content": {"type": "object", "description": "Data to write as JSON"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "JSON file name (workspace-only)"},
+                        "content": {"type": "object", "description": "Data to write as JSON"}
                     },
                     "required": ["file_name", "content"]
                 }
@@ -1064,13 +1044,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "write_txt_file",
-                "description": "Write content to a .txt file",
+                "description": "Write content to a .txt file in the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File name (will auto-add .txt extension)"},
-                        "content": {"type": "string", "description": "Content to write"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name (will auto-add .txt extension) (workspace-only)"},
+                        "content": {"type": "string", "description": "Content to write"}
                     },
                     "required": ["file_name", "content"]
                 }
@@ -1080,13 +1059,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "write_md_file",
-                "description": "Write content to a .md (markdown) file",
+                "description": "Write content to a .md (markdown) file in the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File name (will auto-add .md extension)"},
-                        "content": {"type": "string", "description": "Markdown content to write"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name (will auto-add .md extension) (workspace-only)"},
+                        "content": {"type": "string", "description": "Markdown content to write"}
                     },
                     "required": ["file_name", "content"]
                 }
@@ -1096,13 +1074,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "write_json_from_string",
-                "description": "Write content to a .json file from string content",
+                "description": "Write content to a .json file from string content in the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File name (will auto-add .json extension)"},
-                        "content": {"type": "string", "description": "JSON content as string"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name (will auto-add .json extension) (workspace-only)"},
+                        "content": {"type": "string", "description": "JSON content as string"}
                     },
                     "required": ["file_name", "content"]
                 }
@@ -1112,12 +1089,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "get_file_metadata",
-                "description": "Get metadata information about a file (size, dates)",
+                "description": "Get metadata information about a file (size, dates) from the workspace folder",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File name"},
-                        "path": {"type": "string", "description": "Override working directory"}
+                        "file_name": {"type": "string", "description": "File name (workspace-only)"}
                     },
                     "required": ["file_name"]
                 }
@@ -1215,7 +1191,7 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         # Add space before assistant response
         print()
         assistant_content = message.get('content', '')
-        print(f"{LIGHT_GREEN}Assistant: {assistant_content}{RESET}")
+        print(f"{CYAN}Assistant: {assistant_content}{RESET}")
         
         # Add assistant message to memory
         tool_calls_data = message.get('tool_calls', None)
@@ -1544,10 +1520,15 @@ def interactive_mode():
 
     while True:
         try:
-            prompt = input(f"\n{CYAN}You: {RESET}").strip()
+            prompt = input(f"\nYou: ").strip()
             if prompt.lower() in ['exit', 'quit', 'q']:
                 print("Exiting Qwen Assistant.")
                 logger.info("User exited application")
+                # Move current conversation to recent before exiting
+                if memory.current_conversation:
+                    memory.start_new_conversation()
+                else:
+                    memory.save_memory()
                 break
             elif prompt == '/new':
                 memory.start_new_conversation()
@@ -1607,12 +1588,20 @@ def interactive_mode():
         except KeyboardInterrupt:
             print("\nSaving memory and exiting...")
             logger.info("User interrupted with Ctrl+C")
-            memory.save_memory()
+            # Move current conversation to recent before exiting
+            if memory.current_conversation:
+                memory.start_new_conversation()
+            else:
+                memory.save_memory()
             break
         except EOFError:
             print("\nEOF received, exiting...")
             logger.info("EOF received")
-            memory.save_memory()
+            # Move current conversation to recent before exiting
+            if memory.current_conversation:
+                memory.start_new_conversation()
+            else:
+                memory.save_memory()
             break
         except Exception as e:
             logger.error(f"Unexpected error in interactive loop: {e}")
@@ -1716,7 +1705,7 @@ def configure_settings():
                 print("✅ Configuration saved successfully!")
                 APP_CONFIG = config
                 file_manager = FileManager()
-                memory = MemoryManager()
+                # Use global memory manager instead of creating new one
             else:
                 print("❌ Failed to save configuration")
             break
@@ -1743,7 +1732,7 @@ def main():
     
     # Initialize managers
     file_manager = FileManager()
-    memory = MemoryManager()
+    # Use global memory manager instead of creating a new one
     
     # Test Ollama connection
     if not test_ollama_connection():
