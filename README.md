@@ -22,11 +22,22 @@ A sophisticated AI assistant combining Qwen 2.5:3B with advanced file management
 - **Smart Matching**: Flexible software name recognition
 - **Method Selection**: Auto-detect best installation method
 
+### 🛡️ **Enhanced Reliability & Security**
+- **Network Resilience**: Automatic retry logic with exponential backoff
+- **Comprehensive Logging**: Detailed logs saved to QwenAssistant/qwen_assistant.log
+- **Input Validation**: Filename sanitization and path traversal protection
+- **Error Recovery**: Graceful failure handling with informative messages
+- **Configuration Backup**: Automatic config backups before changes
+- **Memory Safety**: Atomic file operations for conversation persistence
+
 ### 🎯 **User Experience**
 - **Auto-Detection**: Smart keyword-based tool triggering
 - **Progress Indicators**: Visual feedback for slow operations
 - **Command Shortcuts**: `/new`, `/memory`, `/reset`
 - **Mode Control**: Force chat vs tools with prefixes
+- **Enhanced Logging**: Comprehensive logging to file for debugging
+- **Error Recovery**: Automatic retry logic and graceful failure handling
+- **Security Features**: Path validation and filename sanitization
 - **Single File**: No dependencies or separate imports needed!
 
 ## 🚀 Quick Start
@@ -57,10 +68,12 @@ python qwen_assistant.py
 ```
 [wherever you put the file]/
 ├── qwen_assistant.py          # EVERYTHING in one file!
+├── requirements.txt           # Dependencies list for easy setup
 └── QwenAssistant/            # Auto-created on first run
     ├── outputs/              # File operations base directory
     ├── memory/               # Persistent conversation memory
-    └── config.json          # User settings
+    ├── config.json          # User settings
+    └── qwen_assistant.log    # Application logs
 ```
 
 ## 🎛️ Command Reference
@@ -230,14 +243,19 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 5. **Persistent AI Memory**: Unlike standard chat sessions, maintains context across restarts
 6. **Hybrid Intelligence**: Combines AI reasoning with programmatic file operations
 7. **Safety First**: Built-in protections prevent accidental data loss
-8. **Self-Contained**: No external services required beyond Ollama
+8. **Enhanced Reliability**: Network retry logic, comprehensive error handling
+9. **Security Features**: Path traversal protection, input validation
+10. **Comprehensive Logging**: Detailed logs for debugging and monitoring
+11. **Self-Contained**: No external services required beyond Ollama
 
 ## 🎯 Single File Benefits
 
 - ✅ **Easy Deployment**: Just copy one file anywhere
 - ✅ **Auto-Setup**: Creates folders and config automatically
 - ✅ **Portable**: Works on any Windows machine with Python + Ollama
-- ✅ **No Import Errors**: Everything is self-contained
+- ✅ **Dependency Management**: Simple requirements.txt for easy setup
+- ✅ **Robust Error Handling**: Comprehensive logging and recovery
+- ✅ **Security Built-in**: Input validation and path protection
 - ✅ **User-Friendly**: Startup menu and configuration options
 - ✅ **Easier Updates**: Modify one file to change everything
 - ✅ **Simpler Backup**: Just backup qwen_assistant.py and QwenAssistant folder
@@ -246,13 +264,17 @@ The assistant auto-creates `QwenAssistant/config.json` with these settings:
 
 - Models stay loaded in VRAM until manually unloaded or system restart
 - First model load takes ~5-10 seconds, subsequent calls are instant
-- Safe mode prevents file deletions and overwrites
+- Safe mode prevents file deletions and overwrites by default
 - Auto-detection works well, but you can force modes with `chat:` or `tools:` prefixes
-- All file operations respect the configured base path
+- All file operations respect the configured base path with security validation
 - Progress indicators show for long operations like file searches and backups
+- Comprehensive logging helps with debugging (check QwenAssistant/qwen_assistant.log)
+- Network operations include automatic retry logic with exponential backoff
+- Input validation prevents path traversal and filename security issues
 
 ## 📈 Version History
 
+- **v2.1.1**: Enhanced error handling, logging system, security improvements, dependency management
 - **v2.1**: Configuration system, portable design, startup menu, auto-folder creation
 - **v2.0**: Rolling memory system, software installation database
 - **v1.1**: Added safety features, file management tools
