@@ -84,7 +84,7 @@ pip install requests tqdm
 
 #### 3. Start WorkspaceAI
 ```bash
-python workspaceai.py
+python main.py
 ```
 
 ### Linux Setup
@@ -116,7 +116,7 @@ ollama run qwen2.5:3b
 
 #### 3. Start WorkspaceAI
 ```bash
-python3 workspaceai.py
+python3 main.py
 ```
 
 Starts directly in chat mode - auto-creates WorkspaceAI folder with workspace, memory, and config on first run.
@@ -148,14 +148,28 @@ Starts directly in chat mode - auto-creates WorkspaceAI folder with workspace, m
 ## Directory Structure
 ```
 [wherever you put the file]/
-├── workspaceai.py                 # Main application file
-├── requirements.txt               # Dependencies list for easy setup
-├── install_linux.sh               # Linux installation script
-└── WorkspaceAI/                  # Auto-created on first run
-    ├── workspace/                # File operations working directory
-    ├── memory/                   # Persistent conversation memory
-    ├── config.json              # User settings
-    └── workspaceai.log           # Application logs
+├── main.py                       # Entry point - starts the application
+├── workspaceai/                  # Modular application package
+│   ├── __init__.py              # Package initialization
+│   ├── main.py                  # Core application logic
+│   ├── config.py                # Configuration management
+│   ├── memory.py                # Conversation memory system
+│   ├── file_manager.py          # File operations and management
+│   ├── ollama_client.py         # Ollama API integration
+│   ├── tool_schemas.py          # Tool definitions and schemas
+│   ├── utils.py                 # Utility functions
+│   └── software_installer.py    # Software installation tools
+├── requirements.txt             # Dependencies list for easy setup
+├── install_linux.sh             # Linux installation script
+├── docs/                        # Documentation and reports
+│   ├── testing/                 # Test scripts and reports
+│   ├── architecture/            # Architecture documentation
+│   └── reports/                 # Technical reports
+└── WorkspaceAI/                 # Auto-created on first run
+    ├── workspace/               # File operations working directory
+    ├── memory/                  # Persistent conversation memory
+    ├── config.json             # User settings
+    └── qwen_assistant.log       # Application logs
 ```
 
 ## Command Reference
@@ -170,7 +184,7 @@ ollama run qwen2.5:3b
 
 #### Start Chat:
 ```bash
-python workspaceai.py
+python main.py
 ```
 
 ### Chat Interface Commands
@@ -329,7 +343,7 @@ The application uses centralized constants for better maintainability:
 
 ## Key Benefits
 
-1. **Single File Architecture**: Everything you need in one `workspaceai.py` file
+1. **Modular Architecture**: Clean separation of concerns across focused modules for easy collaboration
 2. **Auto-Configuration**: Creates folders and config automatically - no setup required
 3. **Portable Design**: Put anywhere, works everywhere - no hardcoded paths
 4. **Direct Interface**: Starts immediately in classic chat mode - no menu delays
