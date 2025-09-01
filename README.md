@@ -2,13 +2,7 @@
 
 A lightweight AI toolkit that enhances language models with file management capabilities and persistent memory. Designed for qwen2.5:3b but compatible with most Ollama models. Works on Windows and Linux.
 
-## 🖥️ Interface Preview
-
 ```
-🤖 WorkspaceAI v3.0 - Modular Architecture
-Enhanced AI Assistant with collaborative development support
-============================================================
-
 ======================================================================
 WorkspaceAI v3.0
 ======================================================================
