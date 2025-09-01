@@ -99,7 +99,7 @@ def test_ollama_connection():
     """Test if Ollama is running and accessible"""
     try:
         logger.info("Testing Ollama connection...")
-        host = APP_CONFIG['settings']['ollama_host']
+        host = APP_CONFIG['ollama_host']
         response = requests.get(f"http://{host}/api/tags", timeout=CONSTANTS['SUMMARY_TIMEOUT'])
         
         if response.status_code == 200:
@@ -112,7 +112,7 @@ def test_ollama_connection():
                 return True
             else:
                 print("⚠️  Ollama connected but no Qwen models found!")
-                print(f"💡 Run: ollama pull {APP_CONFIG['settings']['model']}")
+                print(f"💡 Run: ollama pull {APP_CONFIG['model']}")
                 logger.warning("No Qwen models found in Ollama")
                 return False
         else:
@@ -148,7 +148,7 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     """Call Ollama with conversation memory and tools"""
     
     if model is None:
-        model = APP_CONFIG['settings']['model']
+        model = APP_CONFIG['model']
     
     # Add user message to memory
     memory.add_message("user", prompt)
@@ -191,7 +191,7 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         progress_thread.start()
     
     # Ollama API call with timeout and retry logic
-    host = APP_CONFIG['settings']['ollama_host']
+    host = APP_CONFIG['ollama_host']
     max_retries = CONSTANTS['API_MAX_RETRIES']
     timeout = CONSTANTS['API_TIMEOUT']
     response = None

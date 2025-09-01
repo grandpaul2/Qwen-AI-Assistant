@@ -24,12 +24,13 @@ RESET = "\033[0m"
 
 # Application constants
 CONSTANTS = {
+    'VERSION': VERSION,
     'MODEL': 'qwen2.5:3b',
     'BASE_URL': 'http://127.0.0.1:11434',
     'MEMORY_LOCATION': 'WorkspaceAI/memory',
     'WORKSPACE_LOCATION': 'WorkspaceAI/workspace',
     'CONFIG_FILE': 'WorkspaceAI/config.json',
-    'LOG_FILE': 'WorkspaceAI/qwen_assistant.log',
+    'LOG_FILE': 'WorkspaceAI/workspaceai.log',
     'RECENT_CONVERSATIONS': 2,
     'SUMMARIZED_CONVERSATIONS': 8,
     'API_TIMEOUT': 30,

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 try:
     # Import the main functionality from modular package
-    from workspaceai import main
+    from src import main
     print("🤖 WorkspaceAI v3.0 - Modular Architecture")
     print("Enhanced AI Assistant with collaborative development support")
     print("=" * 60)
@@ -29,5 +29,5 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         print(f"\nUnexpected error: {e}")
-        print("Please check the logs in WorkspaceAI/qwen_assistant.log for details")
+        print("Please check the logs in WorkspaceAI/workspaceai.log for details")
         sys.exit(1)

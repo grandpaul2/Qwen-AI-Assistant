@@ -169,7 +169,7 @@ Starts directly in chat mode - auto-creates WorkspaceAI folder with workspace, m
     ├── workspace/               # File operations working directory
     ├── memory/                  # Persistent conversation memory
     ├── config.json             # User settings
-    └── qwen_assistant.log       # Application logs
+    └── workspaceai.log          # Application logs
 ```
 
 ## Command Reference
