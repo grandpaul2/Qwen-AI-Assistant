@@ -29,6 +29,16 @@ class IntentClassifier:
             r'\bput.*\bin\s+.*\bfile\b',
             r'\bcreate.*\.(txt|md|csv|json|py)\b'
         ],
+        'CONTENT_CONTINUATION': [
+            r'\b(add|append|extend|continue)\s+.*\b(content|text|section|more)',
+            r'\bmore\s+(content|sections|text|information)',
+            r'\b(add|include)\s+.*\b(to|in)\s+.*\b(file|document)',
+            r'\bupdate\s+.*\b(file|document|content)',
+            r'\bmodify\s+.*\b(file|content)',
+            r'\bedit\s+.*\b(file|document)',
+            r'\bexpand\s+.*\b(content|file|section)',
+            r'\benhance\s+.*\b(content|file|document)'
+        ],
         'SOFTWARE_INSTALLATION': [
             r'\b(install|setup|configure)\s+\w+',
             r'\bhow\s+to\s+install\b',
@@ -59,6 +69,12 @@ class IntentClassifier:
             r'\bcreate\s+a\b',
             r'\bmake\s+me\b',
             r'\bgenerate\s+a\b'
+        ],
+        'CONTENT_CONTINUATION': [
+            r'\bthe\s+file\b',
+            r'\bthe\s+document\b',
+            r'\bmore\s+to\b',
+            r'\badditional\b'
         ],
         'SOFTWARE_INSTALLATION': [
             r'\bhow\s+do\s+i\s+install\b',

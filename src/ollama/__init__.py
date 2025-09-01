@@ -22,6 +22,15 @@ from .legacy_interface import (
     enhanced_tool_selection_pipeline
 )
 
+# Enhanced context-aware interface
+from .enhanced_interface import (
+    call_ollama_with_enhanced_intelligence,
+    enhanced_context_aware_pipeline,
+    detect_file_intent_enhanced,
+    get_conversation_stats,
+    reset_conversation_context
+)
+
 __all__ = [
     'OllamaClient',
     'ToolExecutor', 
@@ -31,5 +40,10 @@ __all__ = [
     'call_ollama_with_tools',
     'detect_file_intent',
     'test_ollama_connection',
-    'enhanced_tool_selection_pipeline'
+    'enhanced_tool_selection_pipeline',
+    'call_ollama_with_enhanced_intelligence',
+    'enhanced_context_aware_pipeline',
+    'detect_file_intent_enhanced',
+    'get_conversation_stats',
+    'reset_conversation_context'
 ]
