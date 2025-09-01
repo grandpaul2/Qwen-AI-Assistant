@@ -2,6 +2,42 @@
 
 A lightweight AI toolkit that enhances language models with file management capabilities and persistent memory. Designed for qwen2.5:3b but compatible with most Ollama models. Works on Windows and Linux.
 
+## 🖥️ Interface Preview
+
+```
+🤖 WorkspaceAI v3.0 - Modular Architecture
+Enhanced AI Assistant with collaborative development support
+============================================================
+Initializing WorkspaceAI...
+✅ Ollama connected! Available Qwen models: qwen2.5:3b
+
+======================================================================
+WorkspaceAI v3.0
+======================================================================
+Safe mode: ON
+Memory: 2 recent + 20 summarized
+Workspace: \WorkspaceAI\workspace
+Continuing from previous conversations...
+
+- 'chat: question...' - force chat without using tools
+- 'tools: command...' - force file management tools
+- 'install: software...' - get installation commands
+
+- /new        Start new conversation
+- /tools      List available tools
+- /memory     Show memory status
+- /config     Configure settings
+- /reset      Clear all memory
+- exit        Quit
+======================================================================
+Ready for your input...
+
+You: can you write me a guide for git commands?
+🔧 create_file → guide_git.md created successfully!
+
+You: 
+```
+
 ## 🆕 Version 3.0 Major Enhancements
 
 ### Enhanced Tool Selection System
