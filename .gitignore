@@ -70,5 +70,10 @@ logs/
 test_*.py
 *_test.py
 
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
 # WorkspaceAI runtime files
 WorkspaceAI/
