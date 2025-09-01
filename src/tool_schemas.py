@@ -16,7 +16,7 @@ def get_all_tool_schemas():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {
+                        "file_name": {
                             "type": "string",
                             "description": "Name of the file to create (e.g., 'example.txt', 'script.py')"
                         },
@@ -25,7 +25,7 @@ def get_all_tool_schemas():
                             "description": "Content to write to the file"
                         }
                     },
-                    "required": ["filename", "content"]
+                    "required": ["file_name", "content"]
                 }
             }
         },
@@ -75,12 +75,12 @@ def get_all_tool_schemas():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {
+                        "file_name": {
                             "type": "string",
                             "description": "Name of the file to delete"
                         }
                     },
-                    "required": ["filename"]
+                    "required": ["file_name"]
                 }
             }
         },
