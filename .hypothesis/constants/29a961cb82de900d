@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\file_manager.py
+# hypothesis_version: 6.138.11
+
+[999, 1024, '\x00', '%Y-%m-%d %H:%M:%S', '*.gz', '*.jpg', '*.pdf', '*.png', '*.tar', '*.zip', '.', '.json', '.md', '.txt', '<>:"|?*', 'AUX', 'CON', 'MAX_FILENAME_LENGTH', 'NUL', 'PRN', 'SEARCH_MAX_FILE_KB', 'Windows', 'access_time', 'compress_format', 'create_file', 'creation_time', 'delete_file', 'ignore', 'list_files', 'modification_time', 'r', 'read_file', 'safe_mode', 'search_content', 'search_max_file_kb', 'size', 'utf-8', 'w', 'workspace', 'write_to_file', 'zip']

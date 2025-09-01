@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\intent_classifier.py
+# hypothesis_version: 6.138.11
+
+[0.0, 0.4, 0.5, 100, 10000, 'CONTENT_CREATION', 'FILE_MANAGEMENT', 'Input cannot be None', 'UNCLEAR', '\\bbackup\\s+.*\\bto\\b', '\\bcreate\\s+a\\b', '\\bdelete\\s+\\w+\\.\\w+', '\\bfind\\s+.*\\bfile', '\\bgenerate\\s+a\\b', '\\bmake\\s+me\\b', '\\bsetup\\s+on\\b', '\\bwrite\\s+me\\b', '__main__', 'all_scores', 'available_intents', 'booster_pattern', 'classified_intent', 'confidence', 'error', 'input', 'input_length', 'input_type', 'input_value', 'intent', 'list all files', 'max_length', 'pattern', 'pattern_matches', 'pattern_matching', 'regex_error', 'score_calculation', 'tied_intents', 'tied_score']

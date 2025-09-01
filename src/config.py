@@ -7,6 +7,15 @@ import os
 import json
 import logging
 from pathlib import Path
+from .exceptions import (
+    WorkspaceAIError,
+    ConfigurationError,
+    ConfigFileError,
+    ConfigValidationError,
+    FilePermissionError,
+    FileNotFoundError,
+    handle_exception
+)
 
 
 # Version
@@ -77,7 +86,16 @@ def get_log_path():
     return CONSTANTS['LOG_FILE']
 
 def save_config(config):
-    """Save configuration to file"""
+    """Save configuration to file - backward compatible wrapper"""
+    try:
+        return _save_config_with_exceptions(config)
+    except Exception as e:
+        # Log error but don't raise for backward compatibility
+        logging.error(f"Config save failed: {e}")
+        print(f"Warning: Could not save config: {str(e)}")
+
+def _save_config_with_exceptions(config):
+    """Save configuration to file - raises exceptions for validation errors"""
     try:
         os.makedirs(os.path.dirname(get_config_path()), exist_ok=True)
         with open(get_config_path(), 'w', encoding='utf-8') as f:
@@ -85,23 +103,85 @@ def save_config(config):
                 "version": CONSTANTS['VERSION'],
                 "settings": config
             }, f, indent=2)
+    except PermissionError as e:
+        # Use handle_exception for consistent error handling
+        error = handle_exception("save_config", e)
+        logging.error(f"Config save failed: {error}")
+        raise error
+    except OSError as e:
+        # Handle OS-level errors (disk full, etc.)
+        error = handle_exception("save_config", e) 
+        logging.error(f"Config save failed: {error}")
+        raise error
+    except (TypeError, ValueError) as e:
+        # Handle JSON serialization errors
+        error = ConfigValidationError(
+            f"Cannot serialize config data: {e}"
+        )
+        error.context["config_type"] = type(config).__name__
+        logging.error(f"Config validation failed: {error}")
+        raise error
     except Exception as e:
-        print(f"Warning: Could not save config: {e}")
+        converted_error = handle_exception("save_config", e)
+        logging.error(f"Config save failed: {converted_error}")
+        raise converted_error
 
 def load_config():
-    """Load configuration from file"""
+    """Load configuration from file - backward compatible wrapper"""
+    try:
+        return _load_config_with_exceptions()
+    except Exception as e:
+        # Log error but return default config for backward compatibility
+        logging.error(f"Config load failed: {e}")
+        print(f"Warning: Could not load config: {str(e)}")
+        return APP_CONFIG.copy()
+
+def _load_config_with_exceptions():
+    """Load configuration from file - raises exceptions for validation errors"""
     config_path = get_config_path()
     if os.path.exists(config_path):
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 return data.get('settings', APP_CONFIG)
+        except PermissionError as e:
+            # Use handle_exception for consistent error handling
+            error = handle_exception("load_config", e)
+            logging.error(f"Config load failed: {error}")
+            raise error
+        except json.JSONDecodeError as e:
+            # Handle corrupted config files
+            error = ConfigFileError(
+                f"Config file is corrupted: {e}"
+            )
+            error.context["config_path"] = config_path
+            logging.error(f"Config corruption detected: {error}")
+            raise error
+        except KeyError as e:
+            # Handle missing required config structure
+            error = ConfigValidationError(
+                f"Config file missing required structure: {e}"
+            )
+            error.context["config_path"] = config_path
+            logging.error(f"Config validation failed: {error}")
+            raise error
         except Exception as e:
-            print(f"Warning: Could not load config: {e}")
+            converted_error = handle_exception("load_config", e)
+            logging.error(f"Config load failed: {converted_error}")
+            raise converted_error
     return APP_CONFIG.copy()
 
 def setup_logging():
-    """Setup logging configuration"""
+    """Setup logging configuration - backward compatible wrapper"""
+    try:
+        return _setup_logging_with_exceptions()
+    except Exception as e:
+        # Always return a logger even on error for backward compatibility
+        print(f"Warning: Could not setup logging: {str(e)}")
+        return logging.getLogger(__name__)
+
+def _setup_logging_with_exceptions():
+    """Setup logging configuration - raises exceptions for validation errors"""
     try:
         os.makedirs(os.path.dirname(get_log_path()), exist_ok=True)
         
@@ -116,6 +196,14 @@ def setup_logging():
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
         return logger
+    except PermissionError as e:
+        # Use handle_exception for consistent error handling
+        error = handle_exception("setup_logging", e)
+        raise error
+    except OSError as e:
+        # Handle OS-level errors (disk full, etc.)
+        error = handle_exception("setup_logging", e)
+        raise error
     except Exception as e:
-        print(f"Warning: Could not setup logging: {e}")
-        return logging.getLogger(__name__)
+        converted_error = handle_exception("setup_logging", e)
+        raise converted_error

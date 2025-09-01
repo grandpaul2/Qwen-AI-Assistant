@@ -8,14 +8,31 @@ supporting various package managers and installation methods.
 import platform
 import subprocess
 import os
+import logging
 from typing import Dict, Any, Optional
 
 from .utils import detect_linux_package_manager
+from .exceptions import (
+    WorkspaceAIError, PackageManagerError, UnsupportedPlatformError,
+    handle_exception, log_and_raise
+)
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def generate_install_commands(software: str, method: str = "auto") -> str:
+    """Generate installation commands for popular software - backward compatible wrapper"""
+    try:
+        return generate_install_commands_with_exceptions(software, method)
+    except Exception as e:
+        logging.error(f"Install command generation failed: {e}")
+        print(f"Warning: Install command generation error: {str(e)}")
+        return f"Error generating install commands for '{software}'. Please check manually."
+
+def generate_install_commands_with_exceptions(software: str, method: str = "auto") -> str:
     """
-    Generate installation commands for popular software (cross-platform)
+    Generate installation commands for popular software - raises exceptions for validation errors
     
     Args:
         software: Name of the software to install
@@ -23,13 +40,73 @@ def generate_install_commands(software: str, method: str = "auto") -> str:
     
     Returns:
         Formatted installation instructions
+        
+    Raises:
+        WorkspaceAIError: For input validation issues
+        UnsupportedPlatformError: For unsupported platforms
+        PackageManagerError: For package manager detection issues
     """
-    software_lower = software.lower().strip()
-    method_lower = method.lower().strip()
-    current_os = platform.system()
+    # Input validation
+    if software is None:
+        error = WorkspaceAIError("Software name cannot be None")
+        error.context["function"] = "generate_install_commands"
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+        
+    if not isinstance(software, str):
+        error = WorkspaceAIError(f"Software name must be a string, got {type(software).__name__}")
+        error.context["software_type"] = type(software).__name__
+        error.context["software_value"] = str(software)
+        logging.error(f"Install command generation failed: {error}")
+        raise error
     
-    # Comprehensive software database
-    software_db = {
+    if method is None:
+        method = "auto"
+    elif not isinstance(method, str):
+        error = WorkspaceAIError(f"Method must be a string, got {type(method).__name__}")
+        error.context["method_type"] = type(method).__name__
+        error.context["method_value"] = str(method)
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+    
+    # Validate and sanitize inputs
+    software_clean = software.strip()
+    if not software_clean:
+        error = WorkspaceAIError("Software name cannot be empty")
+        error.context["original_software"] = software
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+        
+    if len(software_clean) > 100:
+        error = WorkspaceAIError(f"Software name too long: {len(software_clean)} characters (max 100)")
+        error.context["software_length"] = len(software_clean)
+        error.context["software_name"] = software_clean[:50] + "..."
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+    
+    method_clean = method.strip().lower()
+    valid_methods = ["auto", "package_manager", "official", "manual", "winget", "brew", "apt", "dnf", "yum", "pacman", "zypper", "snap", "chocolatey"]
+    if method_clean not in valid_methods:
+        error = WorkspaceAIError(f"Invalid method '{method}'. Valid options: {', '.join(valid_methods)}")
+        error.context["provided_method"] = method
+        error.context["valid_methods"] = valid_methods
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+    
+    try:
+        # Get current platform with validation
+        current_os = platform.system()
+        if not current_os:
+            error = UnsupportedPlatformError("Unable to detect operating system")
+            error.context["platform_system"] = current_os
+            logging.error(f"Install command generation failed: {error}")
+            raise error
+        
+        software_lower = software_clean.lower()
+        method_lower = method_clean
+        
+        # Comprehensive software database
+        software_db = {
         "python": {
             "description": "Python programming language",
             "windows": {
@@ -233,213 +310,370 @@ def generate_install_commands(software: str, method: str = "auto") -> str:
         }
     }
     
-    # Find software (flexible matching)
-    found_software = None
-    for key in software_db:
-        if software_lower in key or key in software_lower:
-            found_software = key
-            break
-    
-    if not found_software:
-        # Generate suggestions for similar software
-        suggestions = [key for key in software_db.keys() if any(word in key for word in software_lower.split())]
-        suggestion_text = f"\\nDid you mean: {', '.join(suggestions[:5])}" if suggestions else ""
-        return f"Software '{software}' not found in database.{suggestion_text}\\n\\nAvailable software: {', '.join(list(software_db.keys())[:10])}..."
-    
-    sw = software_db[found_software]
-    os_key = current_os.lower()
-    
-    # Map macOS system name
-    if os_key == "darwin":
-        os_display = "macOS"
-    else:
-        os_display = current_os
-    
-    # Get platform-specific commands
-    if os_key not in sw:
-        return f"Software '{found_software}' is not supported on {current_os}"
-    
-    platform_commands = sw[os_key]
-    result = f"\\n📦 {sw['description']} ({found_software}) - {os_display}\\n" + "="*60 + "\\n"
-    
-    if method_lower == "auto":
-        # Determine best method automatically based on platform
-        if current_os == "Windows":
-            if "winget" in platform_commands:
-                result += f"🚀 RECOMMENDED (Windows Package Manager):\\n{platform_commands['winget']}\\n\\n"
-            if "chocolatey" in platform_commands:
-                result += f"🍫 Chocolatey:\\n{platform_commands['chocolatey']}\\n\\n"
-            if "direct" in platform_commands:
-                result += f"🌐 Direct Download:\\n{platform_commands['direct']}\\n\\n"
+        # Find software (flexible matching)
+        found_software = None
+        for key in software_db:
+            if software_lower in key or key in software_lower:
+                found_software = key
+                break
         
-        elif current_os == "Darwin":  # macOS
-            if "brew" in platform_commands:
-                result += f"🚀 RECOMMENDED (Homebrew):\\n{platform_commands['brew']}\\n\\n"
-            if "direct" in platform_commands:
-                result += f"🌐 Direct Download:\\n{platform_commands['direct']}\\n\\n"
+        if not found_software:
+            # Generate suggestions for similar software
+            suggestions = [key for key in software_db.keys() if any(word in key for word in software_lower.split())]
+            suggestion_text = f"\\nDid you mean: {', '.join(suggestions[:5])}" if suggestions else ""
+            return f"Software '{software}' not found in database.{suggestion_text}\\n\\nAvailable software: {', '.join(list(software_db.keys())[:10])}..."
         
-        elif current_os == "Linux":
-            # Handle universal installer first
-            if "universal" in platform_commands:
-                result += f"🚀 RECOMMENDED (Universal):\\n{platform_commands['universal']}\\n\\n"
-            else:
-                # Detect package manager and recommend it
-                detected_pm = detect_linux_package_manager()
-                if detected_pm and detected_pm in platform_commands:
-                    result += f"🚀 RECOMMENDED ({detected_pm.upper()}):\\n{platform_commands[detected_pm]}\\n\\n"
-                
-                # Show other available methods
-                for pm_name, command in platform_commands.items():
-                    if pm_name != detected_pm and pm_name not in ["direct", "snap"]:
-                        result += f"📋 {pm_name.upper()}:\\n{command}\\n\\n"
-                
-                # Show snap and direct options
-                if "snap" in platform_commands:
-                    result += f"📦 Snap:\\n{platform_commands['snap']}\\n\\n"
+        sw = software_db[found_software]
+        os_key = current_os.lower()
+        
+        # Map macOS system name
+        if os_key == "darwin":
+            os_display = "macOS"
+        else:
+            os_display = current_os
+        
+        # Get platform-specific commands
+        if os_key not in sw:
+            error = UnsupportedPlatformError(f"Software '{found_software}' is not supported on {current_os}")
+            error.context["software"] = found_software
+            error.context["platform"] = current_os
+            error.context["supported_platforms"] = list(sw.keys())
+            logging.error(f"Install command generation failed: {error}")
+            raise error
+        
+        platform_commands = sw[os_key]
+        result = f"\\n📦 {sw['description']} ({found_software}) - {os_display}\\n" + "="*60 + "\\n"
+        
+        if method_lower == "auto":
+            # Determine best method automatically based on platform
+            if current_os == "Windows":
+                if "winget" in platform_commands:
+                    result += f"🚀 RECOMMENDED (Windows Package Manager):\\n{platform_commands['winget']}\\n\\n"
+                if "chocolatey" in platform_commands:
+                    result += f"🍫 Chocolatey:\\n{platform_commands['chocolatey']}\\n\\n"
                 if "direct" in platform_commands:
-                    result += f"🌐 Alternative:\\n{platform_commands['direct']}\\n\\n"
-    
-    elif method_lower in platform_commands:
-        result += f"📋 {method_lower.upper()} Install:\\n{platform_commands[method_lower]}\\n"
-    else:
-        available = list(platform_commands.keys())
-        result += f"Method '{method}' not available for {current_os}.\\nAvailable methods: {', '.join(available)}\\n"
-        # Show default method
-        if current_os == "Windows" and "winget" in platform_commands:
-            result += f"🚀 Default method:\\n{platform_commands['winget']}"
-        elif current_os == "Darwin" and "brew" in platform_commands:
-            result += f"🚀 Default method:\\n{platform_commands['brew']}"
-        elif current_os == "Linux":
-            detected_pm = detect_linux_package_manager()
-            if detected_pm and detected_pm in platform_commands:
-                result += f"🚀 Default method:\\n{platform_commands[detected_pm]}"
-    
-    # Add platform-specific tips
-    if current_os == "Windows":
-        result += "\\n💡 TIP: Run commands in PowerShell as Administrator if needed"
-    elif current_os == "Darwin":
-        result += "\\n💡 TIP: Install Homebrew first: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-    else:
-        result += "\\n💡 TIP: You may need to restart your terminal after installation"
-    
-    return result
+                    result += f"🌐 Direct Download:\\n{platform_commands['direct']}\\n\\n"
+            
+            elif current_os == "Darwin":  # macOS
+                if "brew" in platform_commands:
+                    result += f"🚀 RECOMMENDED (Homebrew):\\n{platform_commands['brew']}\\n\\n"
+                if "direct" in platform_commands:
+                    result += f"🌐 Direct Download:\\n{platform_commands['direct']}\\n\\n"
+            
+            elif current_os == "Linux":
+                # Handle universal installer first
+                if "universal" in platform_commands:
+                    result += f"🚀 RECOMMENDED (Universal):\\n{platform_commands['universal']}\\n\\n"
+                else:
+                    # Detect package manager and recommend it
+                    try:
+                        detected_pm = detect_linux_package_manager()
+                        if detected_pm and detected_pm in platform_commands:
+                            result += f"🚀 RECOMMENDED ({detected_pm.upper()}):\\n{platform_commands[detected_pm]}\\n\\n"
+                        
+                        # Show other available methods
+                        for pm_name, command in platform_commands.items():
+                            if pm_name != detected_pm and pm_name not in ["direct", "snap"]:
+                                result += f"📋 {pm_name.upper()}:\\n{command}\\n\\n"
+                        
+                        # Show snap and direct options
+                        if "snap" in platform_commands:
+                            result += f"📦 Snap:\\n{platform_commands['snap']}\\n\\n"
+                        if "direct" in platform_commands:
+                            result += f"🌐 Alternative:\\n{platform_commands['direct']}\\n\\n"
+                    except Exception as pm_error:
+                        logging.warning(f"Package manager detection failed: {pm_error}")
+                        # Continue with default recommendations
+                        for pm_name, command in platform_commands.items():
+                            if pm_name not in ["direct", "snap"]:
+                                result += f"📋 {pm_name.upper()}:\\n{command}\\n\\n"
+        
+        elif method_lower in platform_commands:
+            result += f"📋 {method_lower.upper()} Install:\\n{platform_commands[method_lower]}\\n"
+        else:
+            available = list(platform_commands.keys())
+            result += f"Method '{method}' not available for {current_os}.\\nAvailable methods: {', '.join(available)}\\n"
+            # Show default method
+            if current_os == "Windows" and "winget" in platform_commands:
+                result += f"🚀 Default method:\\n{platform_commands['winget']}"
+            elif current_os == "Darwin" and "brew" in platform_commands:
+                result += f"🚀 Default method:\\n{platform_commands['brew']}"
+            elif current_os == "Linux":
+                try:
+                    detected_pm = detect_linux_package_manager()
+                    if detected_pm and detected_pm in platform_commands:
+                        result += f"🚀 Default method:\\n{platform_commands[detected_pm]}"
+                except Exception:
+                    # Use first available method as fallback
+                    first_method = next(iter(platform_commands))
+                    result += f"🚀 Default method:\\n{platform_commands[first_method]}"
+        
+        # Add platform-specific tips
+        if current_os == "Windows":
+            result += "\\n💡 TIP: Run commands in PowerShell as Administrator if needed"
+        elif current_os == "Darwin":
+            result += "\\n💡 TIP: Install Homebrew first: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        else:
+            result += "\\n💡 TIP: You may need to restart your terminal after installation"
+        
+        return result
+        
+    except Exception as e:
+        # Handle unexpected errors
+        converted_error = handle_exception("install_command_generation", e)
+        converted_error.context["software"] = software_clean
+        converted_error.context["method"] = method_clean
+        converted_error.context["platform"] = platform.system()
+        logging.error(f"Install command generation failed: {converted_error}")
+        raise converted_error
 
 
 def check_software_installed(software: str) -> Dict[str, Any]:
+    """Check if software is installed - backward compatible wrapper"""
+    try:
+        return check_software_installed_with_exceptions(software)
+    except Exception as e:
+        logging.error(f"Software check failed: {e}")
+        print(f"Warning: Software check error: {str(e)}")
+        return {
+            "software": software if isinstance(software, str) else "unknown",
+            "installed": False,
+            "version": None,
+            "path": None,
+            "error": str(e)
+        }
+
+def check_software_installed_with_exceptions(software: str) -> Dict[str, Any]:
     """
-    Check if software is installed on the system
+    Check if software is installed on the system - raises exceptions for validation errors
     
     Args:
         software: Name of the software to check
     
     Returns:
         Dictionary with installation status and version info
+        
+    Raises:
+        WorkspaceAIError: For input validation issues
     """
-    software_lower = software.lower()
+    # Input validation
+    if software is None:
+        error = WorkspaceAIError("Software name cannot be None")
+        error.context["function"] = "check_software_installed"
+        logging.error(f"Software check failed: {error}")
+        raise error
+        
+    if not isinstance(software, str):
+        error = WorkspaceAIError(f"Software name must be a string, got {type(software).__name__}")
+        error.context["software_type"] = type(software).__name__
+        error.context["software_value"] = str(software)
+        logging.error(f"Software check failed: {error}")
+        raise error
     
-    # Common command patterns for checking software
-    check_commands = {
-        "python": ["python3", "--version"],
-        "python3": ["python3", "--version"],
-        "nodejs": ["node", "--version"],
-        "node": ["node", "--version"],
-        "git": ["git", "--version"],
-        "docker": ["docker", "--version"],
-        "ollama": ["ollama", "--version"],
-        "curl": ["curl", "--version"],
-        "vim": ["vim", "--version"],
-        "code": ["code", "--version"],
-        "vscode": ["code", "--version"]
-    }
-    
-    result = {
-        "software": software,
-        "installed": False,
-        "version": None,
-        "path": None,
-        "error": None
-    }
-    
-    if software_lower not in check_commands:
-        result["error"] = f"Don't know how to check for {software}"
-        return result
+    software_clean = software.strip()
+    if not software_clean:
+        error = WorkspaceAIError("Software name cannot be empty")
+        error.context["original_software"] = software
+        logging.error(f"Software check failed: {error}")
+        raise error
     
     try:
-        command = check_commands[software_lower]
-        process = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        software_lower = software_clean.lower()
         
-        if process.returncode == 0:
-            result["installed"] = True
-            result["version"] = process.stdout.strip()
+        # Common command patterns for checking software
+        check_commands = {
+            "python": ["python3", "--version"],
+            "python3": ["python3", "--version"],
+            "nodejs": ["node", "--version"],
+            "node": ["node", "--version"],
+            "git": ["git", "--version"],
+            "docker": ["docker", "--version"],
+            "ollama": ["ollama", "--version"],
+            "curl": ["curl", "--version"],
+            "vim": ["vim", "--version"],
+            "code": ["code", "--version"],
+            "vscode": ["code", "--version"]
+        }
+        
+        result = {
+            "software": software_clean,
+            "installed": False,
+            "version": None,
+            "path": None,
+            "error": None
+        }
+        
+        if software_lower not in check_commands:
+            result["error"] = f"Don't know how to check for {software_clean}"
+            return result
+        
+        # Execute the check command with comprehensive error handling
+        command = check_commands[software_lower]
+        try:
+            process = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
             
-            # Try to get the path
-            try:
-                which_cmd = "where" if platform.system() == "Windows" else "which"
-                path_process = subprocess.run(
-                    [which_cmd, command[0]],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if path_process.returncode == 0:
-                    result["path"] = path_process.stdout.strip()
-            except:
-                pass  # Path detection is optional
-        else:
-            result["error"] = process.stderr.strip()
-            
-    except subprocess.TimeoutExpired:
-        result["error"] = "Command timed out"
-    except FileNotFoundError:
-        result["error"] = "Command not found"
+            if process.returncode == 0:
+                result["installed"] = True
+                result["version"] = process.stdout.strip()
+                
+                # Try to get the path with error handling
+                try:
+                    which_cmd = "where" if platform.system() == "Windows" else "which"
+                    path_process = subprocess.run(
+                        [which_cmd, command[0]],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if path_process.returncode == 0:
+                        result["path"] = path_process.stdout.strip()
+                except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError):
+                    logging.debug(f"Could not get path for {software_clean}")
+                    pass  # Path detection is optional
+            else:
+                result["error"] = process.stderr.strip() if process.stderr.strip() else "Command failed"
+                
+        except subprocess.TimeoutExpired:
+            result["error"] = f"Command timed out while checking {software_clean}"
+            logging.error(f"Timeout checking software: {software_clean}")
+        except FileNotFoundError:
+            result["error"] = f"Command not found: {' '.join(command)}"
+            logging.debug(f"Command not found for {software_clean}: {command}")
+        except subprocess.SubprocessError as e:
+            result["error"] = f"Subprocess error: {str(e)}"
+            logging.error(f"Subprocess error checking {software_clean}: {e}")
+        except Exception as e:
+            result["error"] = f"Unexpected error: {str(e)}"
+            logging.error(f"Unexpected error checking {software_clean}: {e}")
+        
+        return result
+        
     except Exception as e:
-        result["error"] = str(e)
-    
-    return result
+        error_msg = f"Failed to check software installation for '{software}': {str(e)}"
+        logging.error(error_msg)
+        raise WorkspaceAIError(error_msg) from e
 
 
 def get_system_info() -> Dict[str, Any]:
+    """Get comprehensive system information - backward compatible wrapper"""
+    try:
+        return get_system_info_with_exceptions()
+    except Exception as e:
+        logging.error(f"System info collection failed: {e}")
+        print(f"Warning: System info error: {str(e)}")
+        return {
+            "os": "unknown",
+            "os_version": "unknown", 
+            "architecture": "unknown",
+            "python_version": "unknown",
+            "package_manager": None,
+            "shell": "unknown",
+            "user": "unknown",
+            "available_tools": {},
+            "error": str(e)
+        }
+
+
+def get_system_info_with_exceptions() -> Dict[str, Any]:
     """
-    Get comprehensive system information for installation guidance
+    Get comprehensive system information for installation guidance.
+    This is the exception-raising version.
     
     Returns:
         Dictionary with system details
-    """
-    info = {
-        "os": platform.system(),
-        "os_version": platform.version(),
-        "architecture": platform.machine(),
-        "python_version": platform.python_version(),
-        "package_manager": None,
-        "shell": os.environ.get("SHELL", "unknown"),
-        "user": os.environ.get("USER", os.environ.get("USERNAME", "unknown"))
-    }
-    
-    # Detect package manager on Linux
-    if info["os"] == "Linux":
-        info["package_manager"] = detect_linux_package_manager()
         
-        # Try to get Linux distribution info
+    Raises:
+        WorkspaceAIError: If system information collection fails
+    """
+    try:
+        # Initialize info with safe defaults
+        info = {
+            "os": "unknown",
+            "os_version": "unknown",
+            "architecture": "unknown", 
+            "python_version": "unknown",
+            "package_manager": None,
+            "shell": "unknown",
+            "user": "unknown",
+            "available_tools": {},
+            "distribution": None
+        }
+        
+        # Collect platform information with error handling
         try:
-            with open("/etc/os-release", "r") as f:
-                for line in f:
-                    if line.startswith("PRETTY_NAME="):
-                        info["distribution"] = line.split("=", 1)[1].strip().strip('"')
-                        break
-        except:
-            info["distribution"] = "Unknown Linux"
+            info["os"] = platform.system()
+        except Exception as e:
+            logging.warning(f"Could not get OS information: {e}")
+            
+        try:
+            info["os_version"] = platform.version()
+        except Exception as e:
+            logging.warning(f"Could not get OS version: {e}")
+            
+        try:
+            info["architecture"] = platform.machine()
+        except Exception as e:
+            logging.warning(f"Could not get architecture: {e}")
+            
+        try:
+            info["python_version"] = platform.python_version()
+        except Exception as e:
+            logging.warning(f"Could not get Python version: {e}")
+            
+        # Get environment variables with validation
+        try:
+            info["shell"] = os.environ.get("SHELL", os.environ.get("COMSPEC", "unknown"))
+        except Exception as e:
+            logging.warning(f"Could not get shell information: {e}")
+            
+        try:
+            info["user"] = os.environ.get("USER", os.environ.get("USERNAME", "unknown"))
+        except Exception as e:
+            logging.warning(f"Could not get user information: {e}")
+
+        # Detect package manager on Linux with error handling
+        if info["os"] == "Linux":
+            try:
+                info["package_manager"] = detect_linux_package_manager()
+            except Exception as e:
+                logging.warning(f"Could not detect Linux package manager: {e}")
+                
+            # Try to get Linux distribution info with comprehensive error handling
+            try:
+                if os.path.exists("/etc/os-release"):
+                    with open("/etc/os-release", "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.startswith("PRETTY_NAME="):
+                                info["distribution"] = line.split("=", 1)[1].strip().strip('"')
+                                break
+                else:
+                    info["distribution"] = "Unknown Linux"
+            except (OSError, IOError, UnicodeDecodeError) as e:
+                logging.warning(f"Could not read OS release information: {e}")
+                info["distribution"] = "Unknown Linux"
+            except Exception as e:
+                logging.warning(f"Unexpected error reading OS information: {e}")
+                info["distribution"] = "Unknown Linux"
     
-    # Check for common package managers/tools
-    tools_to_check = ["git", "curl", "docker", "node", "python3"]
-    info["available_tools"] = {}
-    
-    for tool in tools_to_check:
-        check_result = check_software_installed(tool)
-        info["available_tools"][tool] = check_result["installed"]
-    
-    return info
+        # Check for common package managers/tools with error handling
+        tools_to_check = ["git", "curl", "docker", "node", "python3"]
+        
+        for tool in tools_to_check:
+            try:
+                check_result = check_software_installed(tool)
+                info["available_tools"][tool] = check_result.get("installed", False)
+            except Exception as e:
+                logging.warning(f"Could not check tool {tool}: {e}")
+                info["available_tools"][tool] = False
+        
+        return info
+        
+    except Exception as e:
+        error_msg = f"Failed to collect system information: {str(e)}"
+        logging.error(error_msg)
+        raise WorkspaceAIError(error_msg) from e

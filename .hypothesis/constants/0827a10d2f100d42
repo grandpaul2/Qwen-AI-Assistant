@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\client.py
+# hypothesis_version: 6.138.11
+
+[5.0, 200, 500, ', ', '/api/chat', 'API_MAX_RETRIES', 'API_TIMEOUT', 'MODEL', 'available_models', 'connected', 'content', 'make_request', 'message', 'messages', 'model', 'model_available', 'models', 'name', 'none', 'requested_model', 'role', 'stream', 'text', 'tools', 'user', 'verify_connection']

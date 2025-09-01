@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\response_formatter.py
+# hypothesis_version: 6.138.11
+
+[100, "'", ', ', 'File exists', 'Found', 'Invalid filename', 'JSON file', 'Path', 'Permission denied', 'compress_file', 'copy_file', 'count', 'create_file', 'create_folder', 'created successfully', 'delete_file', 'extract_archive', 'file', 'filename', 'intent', 'intent_confidence', 'list_files', 'move_file', 'outside', 'read_file', 'search_files', 'selected_tool', 'total_weight', 'word_breakdown', 'write_json_file', 'write_md_file', 'write_to_file', 'write_txt_file', 'written successfully', '❌ Error: ', '🔍 Debug Information:']

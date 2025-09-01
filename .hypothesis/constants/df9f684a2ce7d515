@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\tool_executor.py
+# hypothesis_version: 6.138.11
+
+['categories', 'copy_file', 'create_file', 'delete_file', 'description', 'examples', 'functions', 'list_files', 'name', 'parameters', 'read_file', 'search_files', 'software', 'total_count', 'write_to_file']

@@ -1,0 +1,4 @@
+# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\tool_schemas.py
+# hypothesis_version: 6.138.11
+
+['Content to write', 'Delete a file', 'Name of the file', 'auto', 'content', 'create_file', 'delete_file', 'description', 'enum', 'file_name', 'function', 'manual', 'method', 'name', 'object', 'official', 'package_manager', 'parameters', 'properties', 'read_file', 'required', 'software', 'string', 'type', 'write_to_file']
