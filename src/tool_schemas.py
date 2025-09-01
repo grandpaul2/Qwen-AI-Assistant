@@ -19,13 +19,13 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "create_file",
-                "description": "Create a new file with the specified content. Use this for ANY file type including .csv, .txt, .py, .md, etc. Do NOT use create_csv_file, create_txt_file or similar - they don't exist.",
+                "description": "Create a new file with specified content. Use this for ANY file type including .csv, .txt, .py, .md, .json, etc. ALWAYS use this when user wants to create, write, make, save, or generate any kind of file, document, guide, or text content. Do NOT use create_csv_file, create_txt_file or similar - they don't exist.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "file_name": {
                             "type": "string",
-                            "description": "Name of the file to create (e.g., 'example.txt', 'script.py')"
+                            "description": "Name of the file to create (e.g., 'guide.md', 'script.py', 'data.csv')"
                         },
                         "content": {
                             "type": "string", 
@@ -353,13 +353,13 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "generate_install_commands",
-                "description": "Generate installation commands for popular software (cross-platform)",
+                "description": "Generate software installation commands. ONLY use when user explicitly asks for installation instructions, setup commands, or how to install software. DO NOT use for creating guides, documentation, or files about software.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "software": {
                             "type": "string",
-                            "description": "Name of the software to install (e.g., 'python', 'nodejs', 'git', 'docker', 'vscode')"
+                            "description": "Name of the software to generate installation commands for"
                         },
                         "method": {
                             "type": "string",

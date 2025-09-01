@@ -4,7 +4,7 @@
 
 echo "🤖 WorkspaceAI Linux Setup v3.0"
 echo "================================="
-echo "Advanced AI Assistant with Enhanced Tool Detection"
+echo "AI Assistant with Enhanced Tool Selection"
 echo ""
 
 # Function to detect package manager
@@ -133,7 +133,7 @@ else
 fi
 
 echo ""
-echo "🎉 Setup complete! WorkspaceAI v3.0 is ready!"
+echo "🎉 Setup complete! WorkspaceAI v3.0 installation finished."
 echo ""
 echo "Quick Start:"
 echo "1. Start Ollama service: ollama serve"
@@ -158,10 +158,10 @@ echo "   /new      - Start fresh conversation"
 echo "   exit      - Quit assistant"
 echo ""
 echo "🔧 Enhanced v3.0 Features:"
-echo "   • 85-90% tool detection accuracy (vs 50% baseline)"
-echo "   • Advanced contextual pattern matching"
+echo "   • Improved tool selection with contextual intent classification"
+echo "   • Enhanced pattern matching for conversational requests"
 echo "   • Auto-unique filename generation (prevents conflicts)"
-echo "   • Enhanced system prompt with CRITICAL RULE enforcement"
+echo "   • Verbose mode configuration for debugging"
 echo "   • Improved search and file management capabilities"
 echo ""
 echo "🚨 Troubleshooting:"

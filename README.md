@@ -4,12 +4,13 @@ A lightweight AI toolkit that enhances language models with file management capa
 
 ## 🆕 Version 3.0 Major Enhancements
 
-### Advanced Tool Detection System
-- **90-95% Accuracy**: Significant improvement from baseline with research-backed optimizations
-- **Contextual Pattern Matching**: Accurately interprets conversational requests like "save that as .md file"
+### Enhanced Tool Selection System
+- **Improved Accuracy**: Significant improvement over baseline through contextual intent classification
+- **Contextual Pattern Matching**: Interprets conversational requests like "save that as .md file"
 - **Auto-Unique Filenames**: Prevents conflicts with intelligent naming (file.txt → file_1.txt)
-- **Enhanced System Guidance**: Improved prompt engineering for reliable tool selection
+- **Enhanced System Guidance**: Advanced prompt engineering for more reliable tool selection
 - **Runtime Assistance**: Intelligent guidance for ambiguous cases
+- **Verbose Mode**: Optional detailed debugging output available via configuration
 
 ## Core Features
 
@@ -63,9 +64,7 @@ A lightweight AI toolkit that enhances language models with file management capa
 
 ## Quick Start
 
-> **📥 Installation Note:** Currently, you need to download `main.py`, `requirements.txt`, and the complete `src/` folder with all Python modules. The `WorkspaceAI/` data folder is created automatically on first run. We're working on automated executable builds that will eliminate this requirement - coming soon!
-
-### Windows Setup
+ > **📥 Installation Note:** Currently, you need to download `main.py`, `requirements.txt`, and the complete `src/` folder with all Python modules. The `WorkspaceAI/` data folder is created automatically on first run. Automated executable builds are planned for future releases.### Windows Setup
 
 #### 0. Download Required Files
 ```bash
@@ -354,12 +353,15 @@ The assistant auto-creates `WorkspaceAI/config.json` with these settings:
     "model": "qwen2.5:3b",
     "safe_mode": true,
     "ollama_host": "localhost:11434",
-    "search_max_file_kb": 1024
+    "search_max_file_kb": 1024,
+    "verbose_output": false
   }
 }
 ```
 
 **To change settings:** Use `/config` command during chat
+
+- **verbose_output**: `false` (default) for clean output, `true` for detailed debugging information
 
 ### Configuration Constants
 The application uses centralized constants for better maintainability:
@@ -400,7 +402,7 @@ The application uses centralized constants for better maintainability:
 
 ## Version History
 
-- **v3.0**: Major tool detection accuracy improvements (90-95%), enhanced system guidance, auto-unique filenames, intelligent function selection
+- **v3.0**: Enhanced tool selection system with contextual intent classification, improved guidance system, auto-unique filenames, verbose mode configuration
 - **v2.2**: Major security and reliability improvements
   - Workspace-only file operations for enhanced security
   - Replaced os.system with subprocess for security

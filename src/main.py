@@ -21,18 +21,19 @@ logger = logging.getLogger(__name__)
 
 def configure_settings():
     """Configuration menu for changing settings"""
-    global APP_CONFIG
-    config = APP_CONFIG.copy()
+    from .config import load_config, save_config
+    
+    config = load_config()
     
     while True:
         print("\n" + "="*50)
         print("CONFIGURATION SETTINGS")
         print("="*50)
-        print(f"[1] Output folder: {config['paths']['outputs']}")
-        print(f"[2] Memory folder: {config['paths']['memory']}")
-        print(f"[3] AI Model: {config['settings']['model']}")
-        print(f"[4] Safe mode: {'ON' if config['settings']['safe_mode'] else 'OFF'}")
-        print(f"[5] Ollama host: {config['settings']['ollama_host']}")
+        print(f"[1] AI Model: {config.get('model', 'qwen2.5:3b')}")
+        print(f"[2] Safe mode: {'ON' if config.get('safe_mode', True) else 'OFF'}")
+        print(f"[3] Ollama host: {config.get('ollama_host', 'localhost:11434')}")
+        print(f"[4] Verbose output: {'ON' if config.get('verbose_output', False) else 'OFF'}")
+        print(f"[5] Search max file KB: {config.get('search_max_file_kb', 1024)}")
         print("[S] Save and return")
         print("[X] Return without saving")
         print("="*50)
@@ -40,39 +41,36 @@ def configure_settings():
         choice = input("Choice: ").strip().lower()
         
         if choice == '1':
-            new_path = input(f"Enter new output folder [{config['paths']['outputs']}]: ").strip()
-            if new_path:
-                config['paths']['outputs'] = new_path
-                print(f"Output folder updated to: {new_path}")
-        elif choice == '2':
-            new_path = input(f"Enter new memory folder [{config['paths']['memory']}]: ").strip()
-            if new_path:
-                config['paths']['memory'] = new_path
-                print(f"Memory folder updated to: {new_path}")
-        elif choice == '3':
-            new_model = input(f"Enter AI model [{config['settings']['model']}]: ").strip()
+            new_model = input(f"Enter AI model [{config.get('model', 'qwen2.5:3b')}]: ").strip()
             if new_model:
-                config['settings']['model'] = new_model
+                config['model'] = new_model
                 print(f"Model updated to: {new_model}")
-        elif choice == '4':
-            config['settings']['safe_mode'] = not config['settings']['safe_mode']
-            print(f"Safe mode: {'ON' if config['settings']['safe_mode'] else 'OFF'}")
-        elif choice == '5':
-            new_host = input(f"Enter Ollama host [{config['settings']['ollama_host']}]: ").strip()
+        elif choice == '2':
+            config['safe_mode'] = not config.get('safe_mode', True)
+            print(f"Safe mode: {'ON' if config['safe_mode'] else 'OFF'}")
+        elif choice == '3':
+            new_host = input(f"Enter Ollama host [{config.get('ollama_host', 'localhost:11434')}]: ").strip()
             if new_host:
-                config['settings']['ollama_host'] = new_host
+                config['ollama_host'] = new_host
                 print(f"Ollama host updated to: {new_host}")
+        elif choice == '4':
+            config['verbose_output'] = not config.get('verbose_output', False)
+            print(f"Verbose output: {'ON' if config['verbose_output'] else 'OFF'}")
+        elif choice == '5':
+            try:
+                new_kb = input(f"Enter search max file KB [{config.get('search_max_file_kb', 1024)}]: ").strip()
+                if new_kb:
+                    config['search_max_file_kb'] = int(new_kb)
+                    print(f"Search max file KB updated to: {new_kb}")
+            except ValueError:
+                print("Invalid number entered")
         elif choice == 's':
-            if save_config(config):
-                print("✅ Configuration saved successfully!")
-                # Update global config
-                APP_CONFIG.update(config)
-            else:
-                print("❌ Failed to save configuration")
-            break
+            save_config(config)
+            print("✅ Configuration saved successfully!")
+            return config
         elif choice == 'x':
-            print("Configuration cancelled")
-            break
+            print("Configuration changes discarded")
+            return load_config()
         else:
             print("Invalid choice. Please try again.")
 
