@@ -128,6 +128,24 @@
           }
         ]
       }
+    },
+    "8": {
+      "result": "FAIL",
+      "notes": "Tool detection worked (use_tools=True) but AI responded conversationally instead of attempting read_file. Should have tried to read file and reported 'file not found'. System warning correctly caught the mismatch.",
+      "timestamp": "2025-08-31T23:28:17.572549",
+      "scenario": {
+        "id": 8,
+        "category": "File Reading",
+        "name": "Code Review Request",
+        "exchanges": [
+          {
+            "user": "Can you review my workspaceai.py file for any issues?",
+            "expected_action": "read_file",
+            "expected_files": [],
+            "success_criteria": "Reads file and provides analysis"
+          }
+        ]
+      }
     }
   }
 }

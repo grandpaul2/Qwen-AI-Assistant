@@ -70,27 +70,6 @@ def get_all_tool_schemas():
         {
             "type": "function",
             "function": {
-                "name": "append_file",
-                "description": "Append content to an existing file",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "filename": {
-                            "type": "string",
-                            "description": "Name of the file to append to"
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Content to append to the file"
-                        }
-                    },
-                    "required": ["filename", "content"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "delete_file",
                 "description": "Delete a file",
                 "parameters": {
@@ -126,17 +105,13 @@ def get_all_tool_schemas():
             "type": "function", 
             "function": {
                 "name": "list_files",
-                "description": "List files and folders in current directory or specified folder",
+                "description": "List files and folders in current directory or specified subdirectory",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "folder": {
+                        "subdirectory": {
                             "type": "string",
-                            "description": "Folder to list (optional, defaults to current directory)"
-                        },
-                        "show_hidden": {
-                            "type": "boolean",
-                            "description": "Show hidden files (optional, defaults to false)"
+                            "description": "Subdirectory to list (optional, defaults to workspace root)"
                         }
                     },
                     "required": []
@@ -147,25 +122,20 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "search_files",
-                "description": "Search for files by name pattern or content",
+                "description": "Search for files by keyword in workspace",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "pattern": {
+                        "keyword": {
                             "type": "string",
-                            "description": "Search pattern (filename or content to search for)"
+                            "description": "Keyword to search for in filenames"
                         },
-                        "search_type": {
+                        "subdirectory": {
                             "type": "string",
-                            "enum": ["name", "content"],
-                            "description": "Type of search: 'name' for filename search, 'content' for text within files"
-                        },
-                        "folder": {
-                            "type": "string",
-                            "description": "Folder to search in (optional, defaults to current directory)"
+                            "description": "Subdirectory to search in (optional, defaults to workspace root)"
                         }
                     },
-                    "required": ["pattern", "search_type"]
+                    "required": ["keyword"]
                 }
             }
         },
@@ -177,16 +147,16 @@ def get_all_tool_schemas():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "source": {
+                        "src_file": {
                             "type": "string",
                             "description": "Source file to copy"
                         },
-                        "destination": {
+                        "dest_file": {
                             "type": "string",
                             "description": "Destination path for the copy"
                         }
                     },
-                    "required": ["source", "destination"]
+                    "required": ["src_file", "dest_file"]
                 }
             }
         },
