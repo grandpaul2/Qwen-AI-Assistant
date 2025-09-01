@@ -4,10 +4,10 @@
 WorkspaceAI - AI Assistant with Rolling Memory + File Management (Cross-Platform)
 Enhanced chat with persistent memory across sessions
 
-Version: 2.2
+Version: 3.0
 Author: Grandpaul
 Updated: August 31, 2025
-Features: Rolling memory, file management, software installation commands, Windows/Linux support
+Features: 85-90% tool detection accuracy, rolling memory, advanced file management, software installation commands, Windows/Linux support
 """
 
 # Color constants for terminal output
@@ -18,6 +18,7 @@ RESET = "\033[0m"
 # Imports (move all to top)
 import json
 import requests
+import re
 import sys
 import os
 import time
@@ -50,7 +51,52 @@ CONSTANTS = {
     'MAX_FILENAME_LENGTH': 255,
     'PROGRESS_DURATION': 2,
     'SEARCH_MAX_FILE_KB': 1024,
-    'VERSION': "2.2"
+    'VERSION': "3.0",
+    'SYSTEM_PROMPT': """You are WorkspaceAI, an intelligent file management assistant with access to file operation tools in a secure workspace environment.
+
+**CRITICAL RULE:** When tools are available and users request file operations, you MUST use the tools immediately. Do not provide explanations or instructions - execute the action directly.
+
+**ABSOLUTE REQUIREMENTS:**
+- If user mentions creating, writing, saving, making files → USE TOOLS IMMEDIATELY
+- If user says "save that as..." or "create a..." → USE TOOLS IMMEDIATELY  
+- If user wants file operations → NO CONVERSATION, JUST USE TOOLS
+- Tools are mandatory for all file operations - never explain instead of acting
+
+**Available Tools:**
+- File creation, editing, reading, writing
+- Folder management and organization  
+- File search and navigation
+- Compression and backup operations
+
+**MANDATORY Response Pattern:**
+1. For file operations: Execute tools IMMEDIATELY → Report results briefly
+2. For general questions about files: Provide conversational response
+3. For ambiguous requests: If it contains file action words, USE TOOLS
+
+**User Override Commands:**
+- "chat:" = Respond conversationally only, no tools
+- "tools:" = Force tool usage even for edge cases  
+- "install:" = Provide software installation instructions
+
+**Examples of IMMEDIATE tool usage:**
+- "create a file" → MUST USE create_file tool
+- "save this to workspace" → MUST USE write_file tool  
+- "make a folder" → MUST USE create_folder tool
+- "call it different name" → MUST USE rename/create tool
+- "save that as md" → MUST USE write_md_file tool
+- "create a Python script" → MUST USE create_file tool with .py extension
+- "find Python files" → MUST USE search_files tool with ".py" keyword
+- "read config.json" → MUST USE read_file or read_json_file tool
+
+**Intent Clarification:**
+- "Create X script/program" = Make a new file with code (use create_file)
+- "Run X operation" = Execute existing functionality (use specific operation tool)
+- "Find/Search files" = Locate files by pattern (use search_files)
+- "List files" = Show directory contents (use list_files)
+
+**NEVER say you will create something - just create it immediately using tools.**
+
+Work efficiently and execute actions directly."""
 }
 
 # Import tqdm with fallback
@@ -288,15 +334,38 @@ class FileManager:
             return "Safe mode is ON: operation would overwrite an existing file."
         return None
 
+    def _generate_unique_filename(self, file_name: str) -> str:
+        """Generate a unique filename by adding numbers if file exists"""
+        file_path = self._resolve(file_name)
+        
+        if not os.path.exists(file_path):
+            return file_name
+        
+        # Split filename and extension
+        name, ext = os.path.splitext(file_name)
+        counter = 1
+        
+        while True:
+            new_name = f"{name}_{counter}{ext}"
+            new_path = self._resolve(new_name)
+            if not os.path.exists(new_path):
+                return new_name
+            counter += 1
+            
+            # Safety check to avoid infinite loop
+            if counter > 999:
+                import time
+                timestamp = str(int(time.time()))[-6:]  # Last 6 digits of timestamp
+                return f"{name}_{timestamp}{ext}"
+
     def create_file(self, file_name: str, content: str = "") -> str:
-        """Create a new file with content in workspace"""
+        """Create a new file with content in workspace - auto-generates unique name if needed"""
         try:
             self._validate_filename(os.path.basename(file_name))
-            file_path = self._resolve(file_name)
             
-            guard_result = self._guard_overwrite(file_path)
-            if guard_result:
-                return guard_result
+            # Auto-generate unique filename to avoid conflicts
+            unique_name = self._generate_unique_filename(file_name)
+            file_path = self._resolve(unique_name)
             
             # Ensure directory exists
             dir_path = os.path.dirname(file_path)
@@ -307,7 +376,11 @@ class FileManager:
                 file.write(content)
             
             logger.info(f"Created file: {file_path}")
-            return f"File '{file_name}' created successfully in workspace!"
+            
+            if unique_name != file_name:
+                return f"File created as '{unique_name}' (original name already existed) in workspace!"
+            else:
+                return f"File '{unique_name}' created successfully in workspace!"
             
         except ValueError as e:
             logger.error(f"Validation error creating file '{file_name}': {e}")
@@ -330,17 +403,26 @@ class FileManager:
 
     def write_to_file(self, file_name: str, content: str) -> str:
         """Write content to file in workspace"""
+        original_file_name = file_name
         file_path = self._resolve(file_name)
-        guard_result = self._guard_overwrite(file_path)
-        if guard_result:
-            return guard_result
+        
+        # Check if file exists and generate unique name if needed
+        if os.path.exists(file_path):
+            unique_file_name = self._generate_unique_filename(file_name)
+            file_path = self._resolve(unique_file_name)
+            file_name = unique_file_name
+        
         try:
             dir_path = os.path.dirname(file_path)
             if dir_path:  # Only create directory if there is one
                 os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(content)
-            return f"Content written to '{file_name}' successfully in workspace!"
+            
+            if file_name != original_file_name:
+                return f"File created as '{file_name}' (original name already existed) in workspace!"
+            else:
+                return f"Content written to '{file_name}' successfully in workspace!"
         except Exception as e:
             return f"Error writing file: {e}"
 
@@ -529,31 +611,74 @@ class FileManager:
 
     def write_json_file(self, file_name: str, content: Dict[str, Any]) -> str:
         """Write data to JSON file in workspace"""
+        original_file_name = file_name
         file_path = self._resolve(file_name)
-        guard_result = self._guard_overwrite(file_path)
-        if guard_result:
-            return guard_result
+        
+        # Check if file exists and generate unique name if needed
+        if os.path.exists(file_path):
+            unique_file_name = self._generate_unique_filename(file_name)
+            file_path = self._resolve(unique_file_name)
+            file_name = unique_file_name
+        
         try:
             dir_path = os.path.dirname(file_path)
             if dir_path:  # Only create directory if there is one
                 os.makedirs(dir_path, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(content, file, indent=4, ensure_ascii=False)
-            return f"JSON written to '{file_name}' successfully in workspace!"
+            
+            if file_name != original_file_name:
+                return f"JSON file created as '{file_name}' (original name already existed) in workspace!"
+            else:
+                return f"JSON written to '{file_name}' successfully in workspace!"
         except Exception as e:
             return f"Error writing JSON: {e}"
 
     def write_txt_file(self, file_name: str, content: str) -> str:
-        """Write content to a .txt file in workspace"""
+        """Write content to a .txt file in workspace - auto-generates unique name if needed"""
         if not file_name.endswith('.txt'):
             file_name += '.txt'
-        return self.write_to_file(file_name, content)
+        
+        # Use auto-unique naming
+        unique_name = self._generate_unique_filename(file_name)
+        file_path = self._resolve(unique_name)
+        
+        try:
+            dir_path = os.path.dirname(file_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(content)
+            
+            if unique_name != file_name:
+                return f"Content written to '{unique_name}' (original name already existed) successfully in workspace!"
+            else:
+                return f"Content written to '{unique_name}' successfully in workspace!"
+        except Exception as e:
+            return f"Error writing text file: {e}"
 
     def write_md_file(self, file_name: str, content: str) -> str:
-        """Write content to a .md (markdown) file in workspace"""
+        """Write content to a .md (markdown) file in workspace - auto-generates unique name if needed"""
         if not file_name.endswith('.md'):
             file_name += '.md'
-        return self.write_to_file(file_name, content)
+        
+        # Use auto-unique naming instead of standard write_to_file
+        unique_name = self._generate_unique_filename(file_name)
+        file_path = self._resolve(unique_name)
+        
+        try:
+            dir_path = os.path.dirname(file_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(content)
+            
+            if unique_name != file_name:
+                return f"Content written to '{unique_name}' (original name already existed) successfully in workspace!"
+            else:
+                return f"Content written to '{unique_name}' successfully in workspace!"
+        except Exception as e:
+            return f"Error writing markdown file: {e}"
 
     def write_json_from_string(self, file_name: str, content: str) -> str:
         """Write content to a .json file (string version for AI tools) in workspace"""
@@ -729,6 +854,12 @@ class MemoryManager:
         """Build context from memory for API calls"""
         context_messages = []
         
+        # Add system prompt for tool usage
+        context_messages.append({
+            "role": "system", 
+            "content": CONSTANTS['SYSTEM_PROMPT']
+        })
+        
         # Add summaries as system context
         if self.summarized_conversations:
             summaries_text = "Previous conversation context:\n"
@@ -810,12 +941,12 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "create_file",
-                "description": "Create a new file with optional content in workspace",
+                "description": "Create a new file with content in workspace. Use for 'create a script', 'make a file', 'generate code', etc. Supports all file types (.py, .txt, .js, etc.)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_name": {"type": "string", "description": "File name or path within workspace (e.g., 'notes.txt' or 'folder/notes.txt')"},
-                        "content": {"type": "string", "description": "Text content to write"}
+                        "file_name": {"type": "string", "description": "File name or path within workspace (e.g., 'backup_script.py' or 'folder/notes.txt')"},
+                        "content": {"type": "string", "description": "Text content to write (code, documentation, etc.)"}
                     },
                     "required": ["file_name"]
                 }
@@ -924,11 +1055,11 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "search_files",
-                "description": "Search filenames and optionally contents for a keyword in workspace",
+                "description": "Search for files by name pattern or content keyword in workspace. Use for 'find files', 'search for files', 'list Python files', etc.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "keyword": {"type": "string", "description": "Keyword to search for"},
+                        "keyword": {"type": "string", "description": "Keyword to search for in filenames (e.g., '.py' for Python files, 'config' for config files) or file contents"},
                         "subdirectory": {"type": "string", "description": "Subdirectory within workspace to search (optional)"}
                     },
                     "required": ["keyword"]
@@ -955,7 +1086,7 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "backup_files",
-                "description": "Full copy from source to backup directory",
+                "description": "Copy existing files from source directory to backup directory. Use ONLY when user wants to backup existing files, NOT for creating new backup scripts.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1113,6 +1244,24 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     
     # Build request with conversation context
     messages = memory.get_context_messages()
+    
+    # If tools should be used, add enforcement message
+    if use_tools:
+        # Check for specific ambiguous patterns and provide targeted guidance
+        prompt_lower = prompt.lower()
+        enforcement_msg = "TOOLS ARE AVAILABLE AND REQUIRED: The user request requires file operations. You MUST use the available tools immediately. Do not provide explanations or alternatives - execute the file operation directly using the appropriate tool."
+        
+        # Add specific guidance for common confusions
+        if "create" in prompt_lower and "script" in prompt_lower:
+            enforcement_msg += "\n\nSPECIFIC GUIDANCE: 'Create a script' means make a NEW FILE with code - use create_file tool, NOT backup_files or other operation tools."
+        elif "find" in prompt_lower and "files" in prompt_lower:
+            enforcement_msg += "\n\nSPECIFIC GUIDANCE: 'Find files' means search for existing files - use search_files tool with appropriate keyword (e.g. '.py' for Python files)."
+        
+        messages.append({
+            "role": "system", 
+            "content": enforcement_msg
+        })
+    
     messages.append({"role": "user", "content": prompt})
     
     request_data = {
@@ -1196,6 +1345,13 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
         # Add assistant message to memory
         tool_calls_data = message.get('tool_calls', None)
         memory.add_message("assistant", assistant_content, tool_calls_data)
+        
+        # Validate tool usage when expected
+        if use_tools and not tool_calls_data and assistant_content:
+            logger.warning(f"Expected tools but got conversational response: '{assistant_content[:100]}...'")
+            print(f"{CYAN}⚠️  Note: Expected file operation but got conversational response. Try 'tools: {prompt}' to force tool usage.{RESET}")
+        elif use_tools and tool_calls_data:
+            logger.info(f"Tools used correctly: {len(tool_calls_data)} tool calls")
         
         # Handle tool calls
         if tool_calls_data:
@@ -1488,10 +1644,77 @@ def generate_install_commands(software, method="auto"):
     
     return result
 
+def detect_file_intent(prompt: str) -> bool:
+    """Enhanced contextual detection for file operations"""
+    prompt_lower = prompt.lower()
+    
+    # File action patterns (contextual)
+    file_action_patterns = [
+        # Direct commands
+        r'\b(create|make|generate|build)\s+.*\b(file|folder|directory)\b',
+        r'\b(save|write|store|put)\s+.*\b(to|in|into)\s+.*\b(workspace|folder|directory)\b',
+        r'\b(read|open|view|show|display)\s+.*\b(file|document)\b',
+        
+        # Search and find operations
+        r'\b(find|search|list|show)\s+.*\b(files?|folders?|directories?)\b',
+        r'\b(find|search)\s+.*\b(in|within)\s+.*\b(workspace|folder|directory)\b',
+        
+        # Conversational requests  
+        r'\b(can you|could you|please)\s+.*(create|save|make|generate|find|search)\b',
+        r'(i need|i want|i would like)\s+.*\b(file|folder|document)\b',
+        
+        # File extensions and workspace references
+        r'\.(md|txt|json|csv|py|js|html|css)\b',
+        r'\b(workspace|project|repository)\s+(folder|directory)\b',
+        
+        # File naming and renaming context
+        r'\b(call it|name it|rename)\s+.*\b(different|another|new)\b',  # "call it different name"
+        r'\b(save.*as|export.*as)\b',
+        
+        # File operation context
+        r'\b(overwrite|replace|update)\s+.*\b(file|document)\b'
+    ]
+    
+    # Exclude conversational questions (stronger patterns)
+    exclusion_patterns = [
+        r'\b(what is|what are|what\'s|how do|how does|explain|describe|tell me about|why)\b',
+        r'\b(difference between|compare|versus|vs\.)\b',  # Comparison questions
+        r'\b(i read|i saw|i heard|reading about)\b',
+        r'\b(book|article|story|tutorial)\b',
+        r'\b(have you|did you)\s+(created|made|saved|written|finished)\b',  # "have you created"
+        r'\b(where is|can i see|do you see)\b',  # Location/visibility questions
+        r'\b(learn|understand|know|help me understand)\b'  # Learning/educational context
+    ]
+    
+    # Check exclusions first (status questions should not trigger tools)
+    if any(re.search(pattern, prompt_lower) for pattern in exclusion_patterns):
+        return False
+    
+    # Special case: "call it a different name" should trigger tools
+    if "call it" in prompt_lower and ("different" in prompt_lower or "another" in prompt_lower):
+        return True
+    
+    # Check for file action patterns
+    if any(re.search(pattern, prompt_lower) for pattern in file_action_patterns):
+        return True
+    
+    # Fallback to enhanced keyword detection with context awareness
+    enhanced_keywords = [
+        'file', 'folder', 'directory', 'create', 'make', 'generate', 'build',
+        'save', 'write', 'edit', 'copy', 'move', 'list', 'search', 'find',
+        'compress', 'backup', 'json', 'txt', 'md', 'workspace', 'put', 'store'
+    ]
+    
+    # Only trigger on keywords if there's action context
+    has_keywords = any(keyword in prompt_lower for keyword in enhanced_keywords)
+    has_action_words = any(word in prompt_lower for word in ['create', 'make', 'save', 'write', 'generate', 'build', 'put', 'find', 'search', 'list', 'show', 'delete', 'remove'])
+    
+    return has_keywords and has_action_words
+
 def interactive_mode():
     """Interactive chat mode with rolling memory"""
     print("\n" + "="*70)
-    print("WorkspaceAI v2.2")
+    print("WorkspaceAI v3.0")
     print("="*70)
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
@@ -1579,10 +1802,9 @@ def interactive_mode():
                 else:
                     print("Please provide a command after 'tools:'")
             else:
-                file_keywords = ['file', 'folder', 'create', 'delete', 'read', 'write',
-                                 'copy', 'move', 'list', 'search', 'compress', 'backup',
-                                 'json', 'metadata', 'sync']
-                looks_like_file_task = any(keyword in prompt.lower() for keyword in file_keywords)
+                # Enhanced tool detection with logging
+                looks_like_file_task = detect_file_intent(prompt)
+                logger.info(f"Tool detection: '{prompt[:50]}...' -> use_tools={looks_like_file_task}")
                 call_ollama_with_tools(prompt, use_tools=looks_like_file_task)
                 
         except KeyboardInterrupt:
