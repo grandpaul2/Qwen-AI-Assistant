@@ -160,13 +160,29 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     if use_tools:
         # Check for specific ambiguous patterns and provide targeted guidance
         prompt_lower = prompt.lower()
-        enforcement_msg = "TOOLS ARE AVAILABLE AND REQUIRED: The user request requires file operations. You MUST use the available tools immediately. Do not provide explanations or alternatives - execute the file operation directly using the appropriate tool."
+        enforcement_msg = """CRITICAL FUNCTION SELECTION RULES - ONLY USE THESE EXACT FUNCTION NAMES:
+
+Available functions: create_file, write_to_file, read_file, write_json_file, read_json_file, copy_file, delete_file, create_folder, delete_folder, list_files, search_files, move_file, write_txt_file, write_md_file, write_json_from_string
+
+NEVER USE THESE (they don't exist):
+❌ backup_files → ✅ use copy_file
+❌ create_csv_file → ✅ use create_file  
+❌ create_txt_file → ✅ use create_file
+❌ find_files → ✅ use search_files
+❌ duplicate_file → ✅ use copy_file
+❌ read_csv_file → ✅ use read_file
+
+MANDATORY: Check the function name exists in the list above before using it."""
         
         # Add specific guidance for common confusions
-        if "create" in prompt_lower and "script" in prompt_lower:
-            enforcement_msg += "\n\nSPECIFIC GUIDANCE: 'Create a script' means make a NEW FILE with code - use create_file tool, NOT backup_files or other operation tools."
-        elif "find" in prompt_lower and "files" in prompt_lower:
-            enforcement_msg += "\n\nSPECIFIC GUIDANCE: 'Find files' means search for existing files - use search_files tool with appropriate keyword (e.g. '.py' for Python files)."
+        if "backup" in prompt_lower or "copy" in prompt_lower:
+            enforcement_msg += "\n\n→ BACKUP/COPY: Use copy_file with src_file and dest_file parameters."
+        elif "csv" in prompt_lower and "create" in prompt_lower:
+            enforcement_msg += "\n\n→ CSV CREATION: Use create_file with .csv filename and CSV content as text string."
+        elif "find" in prompt_lower or "search" in prompt_lower:
+            enforcement_msg += "\n\n→ SEARCH/FIND: Use search_files with keyword parameter."
+        elif "json" in prompt_lower and ("create" in prompt_lower or "write" in prompt_lower):
+            enforcement_msg += "\n\n→ JSON CREATION: Use write_json_file with dictionary content."
         
         messages.append({
             "role": "system", 
@@ -273,6 +289,13 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
                 print(f"\n🔧 Tool Call: {function_name}")
                 print(f"Arguments: {json.dumps(function_args, indent=2)}")
                 
+                # Validate function exists before execution
+                if not _validate_function_exists(function_name):
+                    logger.error(f"Unknown function: {function_name}")
+                    print(f"❌ Unknown function: {function_name}")
+                    _suggest_alternative_function(function_name)
+                    continue
+                
                 # Show progress for potentially slow operations
                 slow_operations = ['search_files', 'backup_files', 'compress_file']
                 progress_thread = None
@@ -296,6 +319,7 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
                         error_msg = f"Unknown function: {function_name}"
                         logger.error(error_msg)
                         print(f"❌ {error_msg}")
+                        _suggest_alternative_function(function_name)
                         memory.add_message("tool", f"Error: {error_msg}")
                         
                 except Exception as e:
@@ -316,3 +340,54 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     except Exception as e:
         logger.error(f"Error processing Ollama response: {e}")
         print(f"Error processing response: {e}")
+
+
+def _validate_function_exists(function_name):
+    """Validate that a function exists in our tool schemas"""
+    from .tool_schemas import get_all_tool_schemas
+    
+    available_functions = []
+    for schema in get_all_tool_schemas():
+        if "function" in schema and "name" in schema["function"]:
+            available_functions.append(schema["function"]["name"])
+    
+    return function_name in available_functions
+
+
+def _suggest_alternative_function(function_name):
+    """Suggest alternative function names for common mistakes"""
+    from .tool_schemas import get_all_tool_schemas
+    
+    # Get available function names
+    available_functions = []
+    for schema in get_all_tool_schemas():
+        if "function" in schema and "name" in schema["function"]:
+            available_functions.append(schema["function"]["name"])
+    
+    # Common mistake mappings
+    function_suggestions = {
+        'backup_files': 'copy_file',
+        'duplicate_file': 'copy_file', 
+        'create_csv_file': 'create_file',
+        'create_txt_file': 'create_file',
+        'write_txt_file': 'create_file',
+        'create_json_file': 'write_json_file',
+        'save_json': 'write_json_file',
+        'find_files': 'search_files',
+        'locate_files': 'search_files',
+        'list_python_files': 'search_files',
+        'read_csv_file': 'read_file',
+        'append_to_file': 'write_to_file'
+    }
+    
+    if function_name in function_suggestions:
+        suggested = function_suggestions[function_name]
+        print(f"💡 Suggestion: Use '{suggested}' instead of '{function_name}'")
+    else:
+        # Find closest match by similarity
+        import difflib
+        closest_matches = difflib.get_close_matches(function_name, available_functions, n=3, cutoff=0.3)
+        if closest_matches:
+            print(f"💡 Did you mean: {', '.join(closest_matches)}?")
+        else:
+            print(f"💡 Available functions: {', '.join(available_functions)}")

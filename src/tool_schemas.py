@@ -3,6 +3,13 @@ Tool schemas for WorkspaceAI file management functions
 
 This module contains all the JSON schemas for tool calling functionality,
 enabling the LLM to understand and properly use available file operations.
+
+IMPORTANT FOR AI: Only use functions defined in this schema. Do not invent new function names.
+Common function mapping:
+- For copying files: use copy_file (not backup_files, duplicate_file, etc.)
+- For creating any text file: use create_file (not create_csv_file, create_txt_file, etc.)
+- For JSON data: use write_json_file (not create_json_file, save_json, etc.)
+- For searching: use search_files (not find_files, locate_files, etc.)
 """
 
 def get_all_tool_schemas():
@@ -12,7 +19,7 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "create_file",
-                "description": "Create a new file with the specified content",
+                "description": "Create a new file with the specified content. Use this for ANY file type including .csv, .txt, .py, .md, etc. Do NOT use create_csv_file, create_txt_file or similar - they don't exist.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -122,7 +129,7 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "search_files",
-                "description": "Search for files by keyword in workspace",
+                "description": "Search for files by keyword in workspace. Use this for finding files, locating files, listing files by pattern, etc. Do NOT use find_files, locate_files or similar - they don't exist.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -143,7 +150,7 @@ def get_all_tool_schemas():
             "type": "function",
             "function": {
                 "name": "copy_file",
-                "description": "Copy a file to a new location",
+                "description": "Copy a file to a new location. Use this for backups, duplicates, etc. Do NOT use backup_files, duplicate_file or similar - they don't exist.",
                 "parameters": {
                     "type": "object",
                     "properties": {
