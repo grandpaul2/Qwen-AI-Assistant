@@ -37,12 +37,17 @@ def detect_file_intent(prompt: str) -> bool:
         r'\b(save|write|store|put)\s+.*\b(to|in|into)\s+.*\b(workspace|folder|directory)\b',
         r'\b(read|open|view|show|display)\s+.*\b(file|document)\b',
         
+        # Enhanced file reading patterns (ACCURACY BOOST)
+        r'\b(what\'s in|what is in|contents? of|inside)\s+.*\.(py|txt|json|md|csv)\b',
+        r'\b(review|analyze|check|examine|inspect|look at)\s+.*\b(my|the)\s+.*\.(py|txt|json|md|csv)\b',
+        r'\b(what\'s in|what is in)\s+.*\b(my|the)\s+.*\b(file|document)\b',
+        
         # Search and find operations
         r'\b(find|search|list|show)\s+.*\b(files?|folders?|directories?)\b',
         r'\b(find|search)\s+.*\b(in|within)\s+.*\b(workspace|folder|directory)\b',
         
         # Conversational requests  
-        r'\b(can you|could you|please)\s+.*(create|save|make|generate|find|search)\b',
+        r'\b(can you|could you|please)\s+.*(create|save|make|generate|find|search|read|review)\b',
         r'(i need|i want|i would like)\s+.*\b(file|folder|document)\b',
         
         # File extensions and workspace references
@@ -59,7 +64,7 @@ def detect_file_intent(prompt: str) -> bool:
     
     # Exclude conversational questions (stronger patterns)
     exclusion_patterns = [
-        r'\b(what is|what are|what\'s|how do|how does|explain|describe|tell me about|why)\b',
+        r'\b(what is|what are|how do|how does|explain|describe|tell me about|why)\b',
         r'\b(when was|when did|which|where)\b',
         r'\b(difference between|compare|versus|vs\.)\b',  # Comparison questions
         r'\b(i read|i saw|i heard|reading about)\b',
@@ -69,9 +74,17 @@ def detect_file_intent(prompt: str) -> bool:
         r'\b(learn|understand|know|help me understand)\b'  # Learning/educational context
     ]
     
-    # Check exclusions first (status questions should not trigger tools)
-    if any(re.search(pattern, prompt_lower) for pattern in exclusion_patterns):
-        return False
+    # Check exclusions first BUT make exceptions for file-specific requests
+    for pattern in exclusion_patterns:
+        if re.search(pattern, prompt_lower):
+            # Exception: "what's in [filename]" should still trigger tools
+            if re.search(r'\b(what\'s in|what is in)\s+.*\.(py|txt|json|md|csv)\b', prompt_lower):
+                break  # Don't exclude, continue to tool detection
+            # Exception: "what's in my [file]" should still trigger tools  
+            elif re.search(r'\b(what\'s in|what is in)\s+.*\b(my|the)\s+.*\b(file|document)\b', prompt_lower):
+                break  # Don't exclude, continue to tool detection
+            else:
+                return False  # Exclude this as conversational
     
     # Special case: "call it a different name" should trigger tools
     if "call it" in prompt_lower and ("different" in prompt_lower or "another" in prompt_lower):
@@ -144,11 +157,118 @@ def test_ollama_connection():
         return False
 
 
+def enhance_prompt_for_function_selection(prompt: str) -> str:
+    """Pre-process prompts to improve function selection accuracy"""
+    
+    # Common task-to-function mappings
+    task_mappings = {
+        'backup': 'copy_file',
+        'duplicate': 'copy_file', 
+        'save copy': 'copy_file',
+        'make backup': 'copy_file',
+        'create csv': 'create_file',
+        'make csv': 'create_file',
+        'generate file': 'create_file',
+        'find files': 'search_files',
+        'locate files': 'search_files',
+        'search for': 'search_files'
+    }
+    
+    enhanced_prompt = prompt
+    prompt_lower = prompt.lower()
+    
+    for task, function in task_mappings.items():
+        if task in prompt_lower:
+            enhanced_prompt += f"\n[FUNCTION HINT: For '{task}' operations, use '{function}']"
+    
+    return enhanced_prompt
+
+
+def auto_correct_function_name(function_name: str) -> tuple[str, bool]:
+    """Auto-correct common function name mistakes"""
+    
+    # Auto-correction mappings based on testing findings
+    auto_corrections = {
+        'backup_files': 'copy_file',
+        'create_csv_file': 'create_file',
+        'make_file': 'create_file',
+        'find_files': 'search_files',
+        'locate_files': 'search_files',
+        'duplicate_file': 'copy_file',
+        'save_file': 'create_file',
+        'generate_file': 'create_file',
+        'create_txt_file': 'create_file',
+        'create_md_file': 'create_file',
+        'read_csv_file': 'read_file'
+    }
+    
+    if function_name in auto_corrections:
+        corrected = auto_corrections[function_name]
+        print(f"🔧 Auto-correcting '{function_name}' → '{corrected}'")
+        return corrected, True
+    
+    return function_name, False
+
+
+def auto_correct_parameters(function_name: str, original_function: str, function_args: dict) -> dict:
+    """Auto-correct parameters when function names are corrected"""
+    
+    # Parameter mappings for auto-corrected functions
+    parameter_mappings = {
+        'create_csv_file->create_file': {
+            'data': 'content',      # Convert data array to string content
+            'headers': None,        # Remove headers parameter
+            'filename': 'file_name' # Map filename to file_name
+        },
+        'create_txt_file->create_file': {
+            'text': 'content',
+            'filename': 'file_name'
+        },
+        'backup_files->copy_file': {
+            'source': 'src_file',
+            'destination': 'dest_file',
+            'backup_name': 'dest_file'
+        }
+    }
+    
+    mapping_key = f"{original_function}->{function_name}"
+    if mapping_key in parameter_mappings:
+        corrected_args = {}
+        mapping = parameter_mappings[mapping_key]
+        
+        for old_param, value in function_args.items():
+            new_param = mapping.get(old_param, old_param)
+            if new_param is not None:  # None means remove this parameter
+                if old_param == 'data' and new_param == 'content':
+                    # Convert data array to CSV string format
+                    if isinstance(value, list) and len(value) > 0:
+                        import csv
+                        import io
+                        output = io.StringIO()
+                        writer = csv.writer(output)
+                        for row in value:
+                            writer.writerow(row)
+                        corrected_args[new_param] = output.getvalue()
+                    else:
+                        corrected_args[new_param] = str(value)
+                else:
+                    corrected_args[new_param] = value
+        
+        print(f"🔧 Parameter mapping applied: {mapping}")
+        return corrected_args
+    
+    return function_args
+
+
 def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: bool = True):
     """Call Ollama with conversation memory and tools"""
     
     if model is None:
         model = APP_CONFIG['model']
+    
+    # Enhance prompt for better function selection
+    if use_tools:
+        prompt = enhance_prompt_for_function_selection(prompt)
     
     # Add user message to memory
     memory.add_message("user", prompt)
@@ -160,29 +280,34 @@ def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: 
     if use_tools:
         # Check for specific ambiguous patterns and provide targeted guidance
         prompt_lower = prompt.lower()
-        enforcement_msg = """CRITICAL FUNCTION SELECTION RULES - ONLY USE THESE EXACT FUNCTION NAMES:
+        enforcement_msg = """🚨 CRITICAL FUNCTION SELECTION RULES 🚨
 
-Available functions: create_file, write_to_file, read_file, write_json_file, read_json_file, copy_file, delete_file, create_folder, delete_folder, list_files, search_files, move_file, write_txt_file, write_md_file, write_json_from_string
+ONLY USE THESE EXACT FUNCTION NAMES (verify before calling):
+✅ create_file, write_to_file, read_file, write_json_file, read_json_file, copy_file, delete_file, create_folder, delete_folder, list_files, search_files, move_file, write_txt_file, write_md_file, write_json_from_string
 
-NEVER USE THESE (they don't exist):
-❌ backup_files → ✅ use copy_file
-❌ create_csv_file → ✅ use create_file  
-❌ create_txt_file → ✅ use create_file
-❌ find_files → ✅ use search_files
-❌ duplicate_file → ✅ use copy_file
-❌ read_csv_file → ✅ use read_file
+🚫 THESE FUNCTIONS DO NOT EXIST (common mistakes):
+❌ backup_files → ✅ use copy_file instead
+❌ create_csv_file → ✅ use create_file instead
+❌ create_txt_file → ✅ use create_file instead
+❌ find_files → ✅ use search_files instead
+❌ duplicate_file → ✅ use copy_file instead
+❌ read_csv_file → ✅ use read_file instead
+❌ make_file → ✅ use create_file instead
+❌ generate_file → ✅ use create_file instead
 
-MANDATORY: Check the function name exists in the list above before using it."""
+⚠️ MANDATORY CHECK: Before calling ANY function, verify the exact function name exists in the ✅ list above. If it doesn't exist, choose the correct alternative from the ✅ list.
+
+🚨 CRITICAL ENFORCEMENT: When use_tools=True is detected, you MUST use tools immediately. Never provide conversational instructions when tools are available. Execute the file operation directly."""
         
         # Add specific guidance for common confusions
-        if "backup" in prompt_lower or "copy" in prompt_lower:
-            enforcement_msg += "\n\n→ BACKUP/COPY: Use copy_file with src_file and dest_file parameters."
+        if "backup" in prompt_lower or ("copy" in prompt_lower and "file" in prompt_lower):
+            enforcement_msg += "\n\n🔍 BACKUP/COPY DETECTED: Use copy_file with src_file and dest_file parameters."
         elif "csv" in prompt_lower and "create" in prompt_lower:
-            enforcement_msg += "\n\n→ CSV CREATION: Use create_file with .csv filename and CSV content as text string."
+            enforcement_msg += "\n\n🔍 CSV CREATION DETECTED: Use create_file with .csv filename and CSV content as string."
         elif "find" in prompt_lower or "search" in prompt_lower:
-            enforcement_msg += "\n\n→ SEARCH/FIND: Use search_files with keyword parameter."
+            enforcement_msg += "\n\n🔍 SEARCH/FIND DETECTED: Use search_files with keyword parameter."
         elif "json" in prompt_lower and ("create" in prompt_lower or "write" in prompt_lower):
-            enforcement_msg += "\n\n→ JSON CREATION: Use write_json_file with dictionary content."
+            enforcement_msg += "\n\n🔍 JSON CREATION DETECTED: Use write_json_file with dictionary content."
         
         messages.append({
             "role": "system", 
@@ -283,11 +408,20 @@ MANDATORY: Check the function name exists in the list above before using it."""
         # Handle tool calls
         if tool_calls_data:
             for tool_call in tool_calls_data:
-                function_name = tool_call["function"]["name"]
+                original_function_name = tool_call["function"]["name"]
                 function_args = tool_call["function"]["arguments"]
                 
-                print(f"\n🔧 Tool Call: {function_name}")
+                print(f"\n🔧 Tool Call: {original_function_name}")
                 print(f"Arguments: {json.dumps(function_args, indent=2)}")
+                
+                # Auto-correct function name if needed
+                function_name, was_corrected = auto_correct_function_name(original_function_name)
+                if was_corrected:
+                    print(f"📝 Using corrected function: {function_name}")
+                    # Apply parameter auto-correction for the corrected function
+                    function_args = auto_correct_parameters(function_name, original_function_name, function_args)
+                    if function_args != tool_call["function"]["arguments"]:
+                        print(f"📝 Corrected parameters: {json.dumps(function_args, indent=2)}")
                 
                 # Validate function exists before execution
                 if not _validate_function_exists(function_name):

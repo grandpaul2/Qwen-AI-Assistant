@@ -4,7 +4,7 @@
 
 echo "🤖 WorkspaceAI Linux Setup v3.0"
 echo "================================="
-echo "Enhanced AI Assistant with 85-90% tool detection accuracy"
+echo "Advanced AI Assistant with Enhanced Tool Detection"
 echo ""
 
 # Function to detect package manager
