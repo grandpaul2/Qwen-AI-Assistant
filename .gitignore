@@ -8,6 +8,9 @@ build/
 develop-eggs/
 dist/
 downloads/
+
+# Archive (has its own git repo)
+archive/
 eggs/
 .eggs/
 lib/

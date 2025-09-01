@@ -369,6 +369,19 @@ The application uses centralized constants for better maintainability:
 - **v1.1**: Added safety features, file management tools
 - **v1.0**: Basic chat with Ollama integration
 
+## 📚 Documentation
+
+### Quick Links
+- **[Documentation Hub](docs/README.md)** - Complete technical documentation
+- **[Testing Reports](docs/testing/)** - Validation results and analysis
+- **[Architecture Guide](docs/architecture/)** - Modular design for collaboration
+- **[Test Suite](tests/)** - Comprehensive testing framework
+
+### Key Reports
+- **[Final Testing Report](docs/testing/FINAL_COMPREHENSIVE_TESTING_REPORT.md)** - 25-scenario validation results
+- **[Modular Architecture](docs/architecture/MODULAR_ARCHITECTURE_COMPLETE.md)** - Team collaboration structure
+- **[Enhancement Journey](docs/reports/WorkspaceAI_Enhancement_Final_Report.md)** - Development story and metrics
+
 ## License
 
 MIT License - Feel free to use and modify for personal or commercial projects.
