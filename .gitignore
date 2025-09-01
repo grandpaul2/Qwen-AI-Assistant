@@ -45,8 +45,8 @@ ehthumbs.db
 Thumbs.db
 
 # Assistant specific
-# QwenAssistant user data folder (contains configs, memory, logs, outputs)
-QwenAssistant/
+# WorkspaceAI user data folder (contains configs, memory, logs, outputs)
+WorkspaceAI/
 
 # Legacy memory files (comment out if you want to track memory)
 memory.json

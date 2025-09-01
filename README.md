@@ -1,6 +1,6 @@
 # WorkspaceAI v2.2
 
-A powerful toolkit that enhances language models with file management capabilities and persistent memory. Works on Windows and Linux.
+A lightweight toolkit that enhances language models with file management capabilities and persistent memory. Designed for qwen2.5:3b but compatible with most Ollama models. Works on Windows and Linux.
 
 ## Features
 
@@ -34,7 +34,7 @@ A powerful toolkit that enhances language models with file management capabiliti
 - Cross-Platform Support: Works on Windows and Linux with platform-specific optimizations
 - Smart Package Detection: Auto-detects available package managers (apt, dnf, pacman, etc.)
 - Network Resilience: Automatic retry logic with exponential backoff
-- Comprehensive Logging: Detailed logs saved to QwenAssistant/qwen_assistant.log
+- Comprehensive Logging: Detailed logs saved to WorkspaceAI/workspaceai.log
 - Enhanced Security: Path traversal protection, workspace-only operations
 - Error Recovery: Graceful failure handling with informative messages
 - Configuration Management: Centralized constants, automatic config backups
@@ -56,11 +56,12 @@ A powerful toolkit that enhances language models with file management capabiliti
 
 ### Windows Setup
 
-#### 1. Setup Ollama
+#### 1. Setup Ollama and Load Model
 ```bash
 # Install Ollama from https://ollama.ai/download
-ollama pull qwen2.5:3b
 ollama serve
+ollama run qwen2.5:3b
+# Type /bye to exit chat but keep model loaded in VRAM for faster responses
 ```
 
 #### 2. Install Dependencies
@@ -72,7 +73,7 @@ Or manually install:
 pip install requests tqdm
 ```
 
-#### 3. Start Assistant
+#### 3. Start WorkspaceAI
 ```bash
 python workspaceai.py
 ```
@@ -97,13 +98,14 @@ sudo pacman -S python python-pip      # Arch Linux
 # Install dependencies
 pip3 install -r requirements.txt --user
 
-# Install Ollama
+# Install Ollama and Load Model
 curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve
-ollama pull qwen2.5:3b
+ollama run qwen2.5:3b
+# Type /bye to exit chat but keep model loaded in VRAM for faster responses
 ```
 
-#### 3. Start Assistant
+#### 3. Start WorkspaceAI
 ```bash
 python3 workspaceai.py
 ```

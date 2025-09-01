@@ -1495,7 +1495,7 @@ def interactive_mode():
     print("="*70)
     print(f"Safe mode: {'ON' if file_manager.safe_mode else 'OFF'}")
     print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
-    print("Workspace: \\QwenAssistant\\workspace")
+    print("Workspace: \\WorkspaceAI\\workspace")
     
     # Show detected package manager on Linux
     if platform.system() == "Linux":
