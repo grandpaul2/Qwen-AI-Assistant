@@ -1,0 +1,17 @@
+{
+  "test_data": {
+    "string_value": "Hello World",
+    "number_value": 42,
+    "boolean_value": true,
+    "array_value": [1, 2, 3, "four"],
+    "nested_object": {
+      "key1": "value1",
+      "key2": "value2"
+    }
+  },
+  "metadata": {
+    "created": "2025-09-01",
+    "version": "1.0",
+    "description": "Sample JSON file for testing"
+  }
+}

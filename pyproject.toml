@@ -1,0 +1,45 @@
+[tool.pytest.ini_options]
+# Pytest configuration for WorkspaceAI
+
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Coverage configuration
+addopts = [
+    "--cov=src",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "--strict-markers",
+    "--disable-warnings",
+    "-v"
+]
+
+# Test markers
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests for component interactions", 
+    "security: Security-focused tests",
+    "performance: Performance and load tests",
+    "slow: Tests that take a long time to run"
+]
+
+# Minimum version
+minversion = "7.0"
+
+# Filter warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+
+# Timeout for tests (seconds)
+timeout = 30
+
+# Parallel execution
+# Use with: pytest -n auto
+# Requires pytest-xdist

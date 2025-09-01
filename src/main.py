@@ -12,7 +12,7 @@ import logging
 from .config import APP_CONFIG, setup_logging, save_config, get_config_path
 from .memory import memory
 from .file_manager import file_manager
-from .ollama_client import call_ollama_with_tools, detect_file_intent, test_ollama_connection
+from .ollama import call_ollama_with_tools, detect_file_intent, test_ollama_connection
 from .utils import detect_linux_package_manager, generate_install_commands
 
 # Configure logging
