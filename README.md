@@ -8,8 +8,6 @@ A lightweight AI toolkit that enhances language models with file management capa
 🤖 WorkspaceAI v3.0 - Modular Architecture
 Enhanced AI Assistant with collaborative development support
 ============================================================
-Initializing WorkspaceAI...
-✅ Ollama connected! Available Qwen models: qwen2.5:3b
 
 ======================================================================
 WorkspaceAI v3.0
@@ -31,9 +29,6 @@ Continuing from previous conversations...
 - exit        Quit
 ======================================================================
 Ready for your input...
-
-You: can you write me a guide for git commands?
-🔧 create_file → guide_git.md created successfully!
 
 You: 
 ```
