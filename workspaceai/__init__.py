@@ -1,0 +1,24 @@
+"""
+WorkspaceAI v3.0 - Enhanced AI Assistant with File Management and Memory
+Modular architecture for collaborative development
+"""
+
+__version__ = "3.0"
+__author__ = "Grandpaul"
+
+# Import main components for easy access
+from .config import CONSTANTS, APP_CONFIG
+from .memory import MemoryManager
+from .file_manager import FileManager
+from .ollama_client import call_ollama_with_tools, detect_file_intent
+from .main import main, interactive_mode
+
+# Initialize global instances (maintained for backward compatibility)
+memory = MemoryManager()
+file_manager = FileManager()
+
+__all__ = [
+    'CONSTANTS', 'APP_CONFIG', 'MemoryManager', 'FileManager', 
+    'call_ollama_with_tools', 'detect_file_intent', 'main', 'interactive_mode',
+    'memory', 'file_manager'
+]
