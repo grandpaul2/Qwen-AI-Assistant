@@ -17,6 +17,7 @@ from ..memory import memory
 from ..context_manager import ConversationContext
 from ..enhanced_intent_classifier import EnhancedIntentClassifier
 from ..smart_tool_selector import SmartToolSelector
+from ..response_intelligence import ResponseIntelligence, ResponseContext
 from ..tool_schemas import get_all_tool_schemas
 from ..exceptions import WorkspaceAIError, IntentError, ToolParameterError
 
@@ -44,8 +45,9 @@ def get_enhanced_components():
     intent_classifier = EnhancedIntentClassifier(context)
     tool_selector = SmartToolSelector(context)
     response_formatter = ResponseFormatter()
+    response_intelligence = ResponseIntelligence()
     
-    return context, intent_classifier, tool_selector, response_formatter
+    return context, intent_classifier, tool_selector, response_formatter, response_intelligence
 
 
 def call_ollama_with_enhanced_intelligence(
@@ -73,7 +75,7 @@ def call_ollama_with_enhanced_intelligence(
             verbose_output = config.get('verbose_output', False)
         
         # Get enhanced components
-        context, intent_classifier, tool_selector, response_formatter = get_enhanced_components()
+        context, intent_classifier, tool_selector, response_formatter, response_intelligence = get_enhanced_components()
         
         # Store the user message in memory first
         memory.add_message("user", prompt)
@@ -91,6 +93,11 @@ def call_ollama_with_enhanced_intelligence(
         # Execute based on confidence and context
         execution_result = _execute_with_context_awareness(
             prompt, model, selected_tool_info, debug_info, context, verbose_output or False
+        )
+        
+        # Generate intelligent response with Response Intelligence
+        _generate_intelligent_response(
+            prompt, selected_tool_info, execution_result, context, response_intelligence
         )
         
         # Record operation in context for future reference
@@ -114,6 +121,102 @@ def call_ollama_with_enhanced_intelligence(
             logger.error(f"Failed to record error in context: {ctx_error}")
         
         print(f"❌ An error occurred: {e}")
+
+
+def _generate_intelligent_response(
+    prompt: str,
+    selected_tool_info: Dict[str, Any],
+    execution_result: Dict[str, Any],
+    context: ConversationContext,
+    response_intelligence: ResponseIntelligence
+):
+    """Generate intelligent contextual response using Response Intelligence"""
+    try:
+        import time
+        
+        # Create ResponseContext for intelligent response generation
+        operation_type = _determine_operation_type(selected_tool_info, execution_result)
+        success = execution_result.get("success", False)
+        result = execution_result.get("result", "No result")
+        error_details = execution_result.get("error") if not success else None
+        execution_time = execution_result.get("execution_time", 0.0)
+        
+        # Handle operation steps for multi-step operations
+        operation_steps = None
+        if selected_tool_info.get("is_multi_step", False):
+            tool_sequence = selected_tool_info.get("tool_sequence", [])
+            operation_steps = []
+            for i, tool in enumerate(tool_sequence, 1):
+                from ..response_intelligence import OperationStep
+                step = OperationStep(
+                    step_number=i,
+                    tool_name=tool,
+                    description=f"Execute {tool}",
+                    parameters={}
+                )
+                operation_steps.append(step)
+        
+        response_context = ResponseContext(
+            operation_type=operation_type,
+            success=success,
+            result=result,
+            execution_time=execution_time,
+            user_input=prompt,
+            operation_steps=operation_steps,
+            error_details=error_details
+        )
+        
+        # Generate contextual response
+        intelligent_response = response_intelligence.generate_contextual_response(response_context)
+        
+        # Display the intelligent response
+        if intelligent_response:
+            print(f"\n{intelligent_response}")
+            
+            # Add the intelligent response to memory as assistant message
+            memory.add_message("assistant", intelligent_response)
+        
+    except Exception as e:
+        logger.error(f"Failed to generate intelligent response: {e}")
+        # Fallback to basic success/failure message
+        if execution_result.get("success", False):
+            print("✅ Operation completed successfully")
+        else:
+            error_msg = execution_result.get("error", "Unknown error")
+            print(f"❌ Operation failed: {error_msg}")
+
+
+def _determine_operation_type(selected_tool_info: Dict[str, Any], execution_result: Dict[str, Any]) -> str:
+    """Determine operation type for Response Intelligence"""
+    # Check execution type first
+    execution_type = execution_result.get("execution_type", "")
+    if execution_type == "multi_step":
+        return "multi_step_operation"
+    elif execution_type == "direct":
+        return "direct_execution"
+    elif execution_type == "llm_guided":
+        return "llm_guided_operation"
+    
+    # Check primary tool
+    primary_tool = selected_tool_info.get("primary_tool", "")
+    if "file" in primary_tool.lower():
+        if "create" in primary_tool.lower():
+            return "file_creation"
+        elif "modify" in primary_tool.lower() or "edit" in primary_tool.lower():
+            return "file_modification"
+        elif "search" in primary_tool.lower() or "find" in primary_tool.lower():
+            return "search_operation"
+    
+    # Check intent
+    intent = selected_tool_info.get("intent", "")
+    if intent in ["file_creation", "file_modification", "search_operation", "content_generation"]:
+        return intent
+    
+    # Default
+    return "general_operation"
+
+
+# Utility functions for context management
 
 
 def enhanced_context_aware_pipeline(
