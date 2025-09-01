@@ -22,7 +22,7 @@ A lightweight AI toolkit with **85-90% tool detection accuracy** that enhances l
 
 ### Rolling Memory System
 - 2 Recent Conversations: Full context preserved
-- 8 Summarized Conversations: AI-compressed history
+- 20 Summarized Conversations: AI-compressed history
 - Cross-Session Persistence: Resume conversations after restarts
 - Smart Context Building: Automatic history injection
 
@@ -208,7 +208,7 @@ ollama serve                 # Start Ollama service (if needed)
 
 ### Rolling Memory Features:
 - Last 2 conversations: Stored with full detail and context
-- Next 8 conversations: AI-generated summaries for quick reference
+- Next 20 conversations: AI-generated summaries for quick reference
 - Auto-save: Memory saved after every message automatically
 - Cross-session continuity: Resume conversations across restarts
 - Smart context: Previous context automatically loaded into new chats

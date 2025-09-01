@@ -47,7 +47,7 @@ CONSTANTS = {
     'SUMMARY_TIMEOUT': 10,
     'MEMORY_CONTEXT_MESSAGES': 10,
     'MAX_RECENT_CONVERSATIONS': 2,
-    'MAX_SUMMARIZED_CONVERSATIONS': 8,
+    'MAX_SUMMARIZED_CONVERSATIONS': 20,
     'MAX_FILENAME_LENGTH': 255,
     'PROGRESS_DURATION': 2,
     'SEARCH_MAX_FILE_KB': 1024,
@@ -717,7 +717,7 @@ class MemoryManager:
         self.memory_file = os.path.join(get_memory_path(), "memory.json")
         self.current_conversation = []
         self.recent_conversations = []  # Last 2 full conversations
-        self.summarized_conversations = []  # Next 8 summarized
+        self.summarized_conversations = []  # Next 20 summarized
         self.load_memory()
     
     def load_memory(self):
@@ -814,7 +814,7 @@ class MemoryManager:
                 'summary': summary
             })
         
-        # Keep only 8 summarized conversations
+        # Keep only 20 summarized conversations
         self.summarized_conversations = self.summarized_conversations[:CONSTANTS['MAX_SUMMARIZED_CONVERSATIONS']]
         
         # Clear current conversation
