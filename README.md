@@ -1,6 +1,6 @@
 # WorkspaceAI v3.0
 
-A lightweight AI toolkit with **85-90% tool detection accuracy** that enhances language models with file management capabilities and persistent memory. Designed for qwen2.5:3b but compatible with most Ollama models. Works on Windows and Linux.
+A lightweight AI toolkit that enhances language models with file management capabilities and persistent memory. Designed for qwen2.5:3b but compatible with most Ollama models. Works on Windows and Linux.
 
 ## 🆕 Version 3.0 Major Enhancements
 
@@ -63,7 +63,18 @@ A lightweight AI toolkit with **85-90% tool detection accuracy** that enhances l
 
 ## Quick Start
 
+> **📥 Installation Note:** Currently, you need to download the full repository including the `src/` folder with all Python modules. We're working on automated executable builds that will eliminate this requirement - coming soon!
+
 ### Windows Setup
+
+#### 0. Download Repository
+```bash
+# Clone the repository (includes src/ folder with all modules)
+git clone https://github.com/grandpaul2/WorkspaceAI.git
+cd WorkspaceAI
+
+# Or download ZIP from GitHub and extract
+```
 
 #### 1. Setup Ollama and Load Model
 ```bash
@@ -88,6 +99,13 @@ python main.py
 ```
 
 ### Linux Setup
+
+#### 0. Download Repository
+```bash
+# Clone the repository (includes src/ folder with all modules)
+git clone https://github.com/grandpaul2/WorkspaceAI.git
+cd WorkspaceAI
+```
 
 #### 1. Quick Install (Recommended)
 ```bash
@@ -353,6 +371,8 @@ The application uses centralized constants for better maintainability:
 8. **Enhanced Reliability**: Network retry logic, comprehensive error handling
 9. **Security Features**: Path traversal protection, input validation, workspace-only operations
 10. **Comprehensive Logging**: Detailed logs for debugging and monitoring
+
+> **🚀 Coming Soon:** Automated executable builds via GitHub Actions - no Python installation or source files required!
 11. **Self-Contained**: No external services required beyond Ollama
 
 ## Notes
