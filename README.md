@@ -372,10 +372,9 @@ The application uses centralized constants for better maintainability:
 ## 📚 Documentation
 
 ### Quick Links
-- **[Documentation Hub](docs/README.md)** - Complete technical documentation
-- **[Testing Reports](docs/testing/)** - Validation results and analysis
-- **[Architecture Guide](docs/architecture/)** - Modular design for collaboration
-- **[Test Suite](tests/)** - Comprehensive testing framework
+- **[Testing Reports](docs/testing/)** - Validation results and test scripts
+- **[Architecture Guide](docs/architecture/)** - Modular design documentation
+- **[Reports](docs/reports/)** - Technical reports and analysis
 
 ### Key Reports
 - **[Final Testing Report](docs/testing/FINAL_COMPREHENSIVE_TESTING_REPORT.md)** - 25-scenario validation results
