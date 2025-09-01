@@ -32,12 +32,12 @@ def get_all_tool_schemas():
         {
             "type": "function",
             "function": {
-                "name": "write_file",
+                "name": "write_to_file",
                 "description": "Write content to a file (create new or overwrite existing)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {
+                        "file_name": {
                             "type": "string",
                             "description": "Name of the file to write to"
                         },
@@ -46,7 +46,7 @@ def get_all_tool_schemas():
                             "description": "Content to write to the file"
                         }
                     },
-                    "required": ["filename", "content"]
+                    "required": ["file_name", "content"]
                 }
             }
         },
@@ -58,12 +58,12 @@ def get_all_tool_schemas():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {
+                        "file_name": {
                             "type": "string",
                             "description": "Name of the file to read"
                         }
                     },
-                    "required": ["filename"]
+                    "required": ["file_name"]
                 }
             }
         },
@@ -294,21 +294,21 @@ def get_all_tool_schemas():
         {
             "type": "function",
             "function": {
-                "name": "create_json_file",
+                "name": "write_json_file",
                 "description": "Create a JSON file from dictionary data",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {
+                        "file_name": {
                             "type": "string",
                             "description": "Name of the JSON file to create"
                         },
-                        "data": {
+                        "content": {
                             "type": "object",
                             "description": "Dictionary data to save as JSON"
                         }
                     },
-                    "required": ["filename", "data"]
+                    "required": ["file_name", "content"]
                 }
             }
         },
