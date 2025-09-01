@@ -8,14 +8,10 @@ __author__ = "Grandpaul"
 
 # Import main components for easy access
 from .config import CONSTANTS, APP_CONFIG
-from .memory import MemoryManager
-from .file_manager import FileManager
+from .memory import MemoryManager, memory
+from .file_manager import FileManager, file_manager
 from .ollama_client import call_ollama_with_tools, detect_file_intent
 from .main import main, interactive_mode
-
-# Initialize global instances (maintained for backward compatibility)
-memory = MemoryManager()
-file_manager = FileManager()
 
 __all__ = [
     'CONSTANTS', 'APP_CONFIG', 'MemoryManager', 'FileManager', 
