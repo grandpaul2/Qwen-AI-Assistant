@@ -18,6 +18,9 @@ from ..context_manager import ConversationContext
 from ..enhanced_intent_classifier import EnhancedIntentClassifier
 from ..smart_tool_selector import SmartToolSelector
 from ..response_intelligence import ResponseIntelligence, ResponseContext
+from ..advanced_user_experience import (
+    ConversationalInterface, WorkflowIntelligence, UserExperienceEnhancer
+)
 from ..tool_schemas import get_all_tool_schemas
 from ..exceptions import WorkspaceAIError, IntentError, ToolParameterError
 
@@ -47,7 +50,14 @@ def get_enhanced_components():
     response_formatter = ResponseFormatter()
     response_intelligence = ResponseIntelligence()
     
-    return context, intent_classifier, tool_selector, response_formatter, response_intelligence
+    # Phase 3: Advanced User Experience components
+    conversational_interface = ConversationalInterface(context, response_intelligence)
+    workflow_intelligence = WorkflowIntelligence(context)
+    user_experience_enhancer = UserExperienceEnhancer(conversational_interface, workflow_intelligence)
+    
+    return (context, intent_classifier, tool_selector, response_formatter, 
+            response_intelligence, conversational_interface, workflow_intelligence, 
+            user_experience_enhancer)
 
 
 def call_ollama_with_enhanced_intelligence(
@@ -75,14 +85,57 @@ def call_ollama_with_enhanced_intelligence(
             verbose_output = config.get('verbose_output', False)
         
         # Get enhanced components
-        context, intent_classifier, tool_selector, response_formatter, response_intelligence = get_enhanced_components()
+        components = get_enhanced_components()
+        context, intent_classifier, tool_selector, response_formatter, response_intelligence = components[:5]
+        conversational_interface, workflow_intelligence, user_experience_enhancer = components[5:]
         
         # Store the user message in memory first
         memory.add_message("user", prompt)
         
+        # Phase 3: Process user input through conversational interface
+        conversation_analysis = conversational_interface.process_user_input(prompt)
+        logger.info(f"Conversation analysis: {conversation_analysis}")
+        
+        # Phase 3: Get proactive user experience enhancements
+        experience_enhancements = user_experience_enhancer.enhance_user_experience({
+            "current_task": conversation_analysis.get("detected_intent", "general"),
+            "communication_style": conversation_analysis.get("communication_style", "neutral"),
+            "user_input": prompt
+        })
+        
         if not use_tools:
-            # Simple chat without tools but with context awareness
+            # Simple chat without tools but with Phase 3 conversational enhancement
             response = _enhanced_simple_chat(prompt, model, context, verbose_output or False)
+            
+            # Apply Phase 3 enhancements to the response if available
+            if response and response.get("success"):
+                try:
+                    from ..response_intelligence import ResponseContext
+                    response_context = ResponseContext(
+                        operation_type="simple_chat",
+                        success=True,
+                        result=response.get("result", ""),
+                        execution_time=0.1,
+                        user_input=prompt
+                    )
+                    
+                    # Show proactive guidance
+                    if experience_enhancements.get("learning"):
+                        for tip in experience_enhancements["learning"]:
+                            print(f"💡 {tip}")
+                    
+                    # Generate conversational response using Phase 3 interface
+                    conversational_response = conversational_interface.generate_conversational_response(
+                        {"result": response.get("result", "")}, response_context
+                    )
+                    
+                    # Update the stored response
+                    print(f"\n🔄 Enhanced: {conversational_response}")
+                    
+                except Exception as ux_error:
+                    logger.error(f"Phase 3 UX enhancement failed for simple chat: {ux_error}")
+                    # Continue with original response
+            
             return
         
         # Enhanced context-aware tool selection pipeline
@@ -95,9 +148,10 @@ def call_ollama_with_enhanced_intelligence(
             prompt, model, selected_tool_info, debug_info, context, verbose_output or False
         )
         
-        # Generate intelligent response with Response Intelligence
-        _generate_intelligent_response(
-            prompt, selected_tool_info, execution_result, context, response_intelligence
+        # Generate intelligent response with Phase 3 conversational enhancement
+        _generate_conversational_response(
+            prompt, selected_tool_info, execution_result, context, 
+            response_intelligence, conversational_interface, conversation_analysis
         )
         
         # Record operation in context for future reference
@@ -610,6 +664,163 @@ def _enhanced_simple_chat(
         return {"success": False, "error": str(e)}
 
 
+def _enhanced_simple_chat_with_ux(
+    prompt: str,
+    model: Optional[str],
+    context: ConversationContext,
+    conversational_interface: 'ConversationalInterface',
+    experience_enhancements: Dict[str, Any],
+    verbose_output: bool = False
+) -> Dict[str, Any]:
+    """Enhanced simple chat with Phase 3 UX improvements"""
+    try:
+        client = get_default_client()
+        if model:
+            client.model = model
+        
+        # Add context with UX enhancements
+        recent_ops = context.get_recent_operations(3)
+        if recent_ops and verbose_output:
+            print(f"💭 Continuing conversation with {len(recent_ops)} recent operations in context")
+        
+        # Show proactive guidance if available
+        if experience_enhancements.get("learning"):
+            for tip in experience_enhancements["learning"]:
+                print(f"💡 {tip}")
+        
+        response = client.simple_chat(prompt)
+        if response:
+            # Generate conversational response using Phase 3 interface
+            from ..response_intelligence import ResponseContext
+            response_context = ResponseContext(
+                operation_type="simple_chat",
+                success=True,
+                result=response,
+                execution_time=0.1,
+                user_input=prompt
+            )
+            
+            conversational_response = conversational_interface.generate_conversational_response(
+                {"result": response}, response_context
+            )
+            
+            print(f"\n{conversational_response}")
+            memory.add_message("assistant", conversational_response)
+            
+            # Record chat operation in context
+            context.add_operation(
+                operation_type="simple_chat",
+                tool_name="simple_chat_with_ux",
+                parameters={"prompt": prompt[:100]},
+                result=conversational_response[:100],
+                success=True,
+                context_tags=["chat", "no_tools", "phase3_ux"]
+            )
+            
+            return {"success": True, "result": conversational_response, "execution_type": "simple_chat_with_ux"}
+        else:
+            print("❌ No response received from Ollama")
+            return {"success": False, "error": "No response from Ollama"}
+            
+    except Exception as e:
+        logger.error(f"Enhanced simple chat with UX error: {e}")
+        print(f"❌ Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _generate_conversational_response(
+    prompt: str,
+    selected_tool_info: Dict[str, Any],
+    execution_result: Dict[str, Any],
+    context: ConversationContext,
+    response_intelligence: 'ResponseIntelligence',
+    conversational_interface: 'ConversationalInterface',
+    conversation_analysis: Dict[str, Any]
+):
+    """Generate intelligent conversational response using Phase 3 enhancements"""
+    try:
+        import time
+        
+        # Create ResponseContext for intelligent response generation
+        operation_type = _determine_operation_type(selected_tool_info, execution_result)
+        success = execution_result.get("success", False)
+        result = execution_result.get("result", "No result")
+        error_details = execution_result.get("error") if not success else None
+        execution_time = execution_result.get("execution_time", 0.0)
+        
+        # Handle operation steps for multi-step operations
+        operation_steps = None
+        if selected_tool_info.get("is_multi_step", False):
+            tool_sequence = selected_tool_info.get("tool_sequence", [])
+            operation_steps = []
+            for i, tool in enumerate(tool_sequence, 1):
+                from ..response_intelligence import OperationStep
+                operation_steps.append(OperationStep(
+                    step_number=i,
+                    tool_name=tool.get("name", "unknown"),
+                    description=tool.get("description", f"Step {i}"),
+                    parameters=tool.get("parameters", {}),
+                    estimated_time=1.0
+                ))
+        
+        from ..response_intelligence import ResponseContext
+        response_context = ResponseContext(
+            operation_type=operation_type,
+            success=success,
+            result=result,
+            execution_time=execution_time,
+            user_input=prompt,
+            error_details=error_details,
+            operation_steps=operation_steps
+        )
+        
+        # Generate base intelligent response
+        intelligent_response = response_intelligence.generate_contextual_response(response_context)
+        
+        # Enhance with conversational interface (Phase 3)
+        conversational_response = conversational_interface.generate_conversational_response(
+            execution_result, response_context
+        )
+        
+        # Print the enhanced response
+        print(f"\n{conversational_response}")
+        
+        # Store in memory
+        memory.add_message("assistant", conversational_response)
+        
+        # Record response generation in context
+        context.add_operation(
+            operation_type="response_generation",
+            tool_name="conversational_response",
+            parameters={
+                "base_response_length": len(intelligent_response),
+                "conversational_style": conversation_analysis.get("suggested_tone", "balanced")
+            },
+            result=f"Generated {len(conversational_response)} char conversational response",
+            success=True,
+            context_tags=["phase3_response", "conversational"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating conversational response: {e}")
+        # Fallback to basic response intelligence
+        try:
+            from ..response_intelligence import ResponseContext
+            response_context = ResponseContext(
+                operation_type="fallback",
+                success=execution_result.get("success", False),
+                result=execution_result.get("result", ""),
+                execution_time=0.0,
+                user_input=prompt
+            )
+            fallback_response = response_intelligence.generate_contextual_response(response_context)
+            print(f"\n{fallback_response}")
+            memory.add_message("assistant", fallback_response)
+        except Exception as fallback_error:
+            logger.error(f"Fallback response generation failed: {fallback_error}")
+            print(f"❌ Error generating response: {e}")
+
+
 def _record_operation_in_context(
     prompt: str,
     selected_tool_info: Dict[str, Any],
@@ -759,3 +970,31 @@ def get_conversation_stats() -> Dict[str, Any]:
         "user_patterns": dict(context.session.user_patterns),
         "session_start": start_time_str
     }
+
+
+# Backward compatibility exports
+def detect_file_intent(prompt: str) -> bool:
+    """
+    Backward compatible file intent detection
+    Uses the enhanced version but maintains original signature
+    """
+    return detect_file_intent_enhanced(prompt)
+
+
+def test_ollama_connection():
+    """
+    Test Ollama connection with enhanced error handling
+    """
+    try:
+        # Test using the enhanced client
+        client = get_default_client()
+        return client.test_connection()
+    except Exception as e:
+        logger.error(f"Enhanced connection test failed: {e}")
+        # Fallback to legacy test
+        try:
+            from .legacy_interface import test_ollama_connection as legacy_test
+            return legacy_test()
+        except Exception as legacy_error:
+            logger.error(f"Legacy connection test also failed: {legacy_error}")
+            return False
