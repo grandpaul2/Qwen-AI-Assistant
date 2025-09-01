@@ -63,17 +63,21 @@ A lightweight AI toolkit that enhances language models with file management capa
 
 ## Quick Start
 
-> **📥 Installation Note:** Currently, you need to download the full repository including the `src/` folder with all Python modules. We're working on automated executable builds that will eliminate this requirement - coming soon!
+> **📥 Installation Note:** Currently, you need to download `main.py`, `requirements.txt`, and the complete `src/` folder with all Python modules. The `WorkspaceAI/` data folder is created automatically on first run. We're working on automated executable builds that will eliminate this requirement - coming soon!
 
 ### Windows Setup
 
-#### 0. Download Repository
+#### 0. Download Required Files
 ```bash
-# Clone the repository (includes src/ folder with all modules)
+# Option 1: Clone repository (includes everything)
 git clone https://github.com/grandpaul2/WorkspaceAI.git
 cd WorkspaceAI
 
-# Or download ZIP from GitHub and extract
+# Option 2: Manual download (minimal files only)
+# Download these files from GitHub:
+# - main.py
+# - requirements.txt  
+# - src/ folder (complete with all .py files)
 ```
 
 #### 1. Setup Ollama and Load Model
@@ -100,11 +104,17 @@ python main.py
 
 ### Linux Setup
 
-#### 0. Download Repository
+#### 0. Download Required Files
 ```bash
-# Clone the repository (includes src/ folder with all modules)
+# Option 1: Clone repository (includes everything)
 git clone https://github.com/grandpaul2/WorkspaceAI.git
 cd WorkspaceAI
+
+# Option 2: Manual download (minimal files only)
+# Download these files from GitHub:
+# - main.py
+# - requirements.txt  
+# - src/ folder (complete with all .py files)
 ```
 
 #### 1. Quick Install (Recommended)
