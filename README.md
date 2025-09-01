@@ -177,7 +177,7 @@ Starts directly in chat mode - auto-creates WorkspaceAI folder with workspace, m
 ```
 [wherever you put the file]/
 ├── main.py                       # Entry point - starts the application
-├── workspaceai/                  # Modular application package
+├── src/                          # Modular application package
 │   ├── __init__.py              # Package initialization
 │   ├── main.py                  # Core application logic
 │   ├── config.py                # Configuration management
