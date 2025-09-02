@@ -14,6 +14,7 @@ from ..universal_tool_handler import handle_any_tool_call
 from ..memory import memory
 from ..config import load_config
 from ..progress import show_progress
+from ..enhanced_tool_instructions import build_enhanced_tool_instruction, get_context_aware_tool_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def _call_ollama_with_open_tools(prompt: str, model: Optional[str], verbose_outp
         context_messages = memory.get_context_messages()
         
         # Create open-ended tool instruction
-        system_message = _build_open_tool_instruction()
+        system_message = build_enhanced_tool_instruction()
         
         if context_messages:
             context_messages.append({"role": "system", "content": system_message})
@@ -142,7 +143,7 @@ def _call_ollama_with_open_tools(prompt: str, model: Optional[str], verbose_outp
             ]
         
         # Define flexible tool schemas that cover broad categories
-        open_tools = _get_open_tool_schemas()
+        open_tools = get_context_aware_tool_schemas()
         
         if verbose_output:
             print(f"🔧 Available tool categories: {[tool['function']['name'] for tool in open_tools]}")
