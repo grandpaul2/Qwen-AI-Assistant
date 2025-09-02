@@ -3,7 +3,7 @@ Simple Ollama connection test utility
 """
 
 import logging
-from .client import OllamaClient
+from .ollama_client import OllamaClient
 
 logger = logging.getLogger(__name__)
 

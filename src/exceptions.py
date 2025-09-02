@@ -6,7 +6,9 @@ Basic exceptions focused on tool selection accuracy without verbose error handli
 
 class WorkspaceAIError(Exception):
     """Base exception for WorkspaceAI errors"""
-    pass
+    def __init__(self, message="", context=None):
+        super().__init__(message)
+        self.context = context or {}
 
 
 class ConfigurationError(WorkspaceAIError):
@@ -21,6 +23,11 @@ class ConfigFileError(ConfigurationError):
 
 class PackageManagerError(WorkspaceAIError):
     """Package manager operation errors"""
+    pass
+
+
+class UnsupportedPlatformError(WorkspaceAIError):
+    """Platform not supported errors"""
     pass
 
 

@@ -11,13 +11,13 @@ import time
 from typing import Dict, List, Optional, Any
 import threading
 
-from ..config import APP_CONFIG, CONSTANTS, load_config
-from ..exceptions import (
+from .config import APP_CONFIG, CONSTANTS, load_config
+from .exceptions import (
     OllamaConnectionError, 
     WorkspaceAIError, 
     handle_exception
 )
-from ..progress import show_progress
+from .progress import show_progress
 
 logger = logging.getLogger(__name__)
 

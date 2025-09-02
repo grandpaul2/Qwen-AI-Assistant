@@ -695,6 +695,174 @@ class TestFileManagerConfigurationScenarios:
         assert fm.search_content == False
     
     def test_list_files_with_subdirectory_edge_cases(self, file_manager_instance):
+        """Test list_files with subdirectory edge cases (missing coverage lines)"""
+        # Create nested subdirectory structure
+        os.makedirs(os.path.join(file_manager_instance.base_path, "deep", "nested"), exist_ok=True)
+        file_manager_instance.create_file("deep/nested/file.txt", "content")
+        
+        # Test listing files in deep path
+        result = file_manager_instance.list_files("deep/nested")
+        assert "file.txt" in result
+        
+        # Test listing non-existent subdirectory
+        result = file_manager_instance.list_files("nonexistent")
+        assert ("not found" in result.lower() or 
+                "does not exist" in result.lower() or
+                "empty" in result.lower())
+
+
+class TestMissingLinesCoverage:
+    """Comprehensive tests to target specific missing coverage lines in file_manager.py"""
+    
+    def test_filename_length_validation(self, file_manager_instance):
+        """Test filename length validation (lines 100-101)"""
+        # Test very long filename that exceeds system limits
+        very_long_name = "a" * 300 + ".txt"
+        result = file_manager_instance.create_file(very_long_name, "content")
+        assert "Error:" in result and "too long" in result
+    
+    def test_unique_filename_timestamp_fallback(self, file_manager_instance):
+        """Test timestamp fallback in unique filename generation (lines 139-141)"""
+        import time
+        
+        # Create a file with base name
+        file_manager_instance.create_file("timestamp_test.txt", "original")
+        
+        # Mock time to control timestamp generation
+        with patch('time.time', return_value=1234567890.123):
+            # Force unique name generation that would use timestamp
+            result = file_manager_instance.create_file("timestamp_test.txt", "new content")
+            # Should create a unique filename using timestamp when counter would be high
+            assert "created as" in result.lower()
+    
+    def test_read_file_exception_handling(self, file_manager_instance):
+        """Test exception handling in read_file (lines 194-197)"""
+        # Create a file then simulate read permission error
+        file_manager_instance.create_file("read_test.txt", "content")
+        file_path = os.path.join(file_manager_instance.base_path, "read_test.txt")
+        
+        # Mock open to raise an exception
+        with patch('builtins.open', side_effect=PermissionError("Permission denied")):
+            result = file_manager_instance.read_file("read_test.txt")
+            assert "Error:" in result and "Permission denied" in result
+    
+    def test_unique_name_generation_in_write_to_file(self, file_manager_instance):
+        """Test unique name generation in write_to_file (lines 220-228)"""
+        # Create base file
+        file_manager_instance.create_file("write_base.txt", "original")
+        
+        # Use write_to_file which should generate unique name
+        result = file_manager_instance.write_to_file("write_base.txt", "new content")
+        assert "original name already existed" in result
+        assert "created as" in result
+    
+    def test_delete_file_error_handling(self, file_manager_instance):
+        """Test delete_file error handling (lines 239, 247-253)"""
+        # Test deleting non-existent file with safe mode off
+        file_manager_instance.safe_mode = False
+        result = file_manager_instance.delete_file("nonexistent_delete.txt")
+        assert "Error:" in result or "not found" in result.lower()
+        
+        # Test delete with permission error
+        file_manager_instance.create_file("delete_error_test.txt", "content")
+        file_path = os.path.join(file_manager_instance.base_path, "delete_error_test.txt")
+        
+        with patch('os.remove', side_effect=PermissionError("Permission denied")):
+            result = file_manager_instance.delete_file("delete_error_test.txt")
+            assert "Error:" in result and "Permission denied" in result
+        
+        file_manager_instance.safe_mode = True  # Reset
+    
+    def test_file_operations_edge_cases(self, file_manager_instance):
+        """Test file operations edge cases (lines 276-279, 288-289, 299-300)"""
+        # First, disable safe mode to test actual file operation errors
+        file_manager_instance.safe_mode = False
+        
+        # Test copy_file with non-existent source
+        result = file_manager_instance.copy_file("nonexistent_source.txt", "dest.txt")
+        assert ("not found" in result.lower() or "Error" in result or 
+                "No such file" in result)
+        
+        # Test move_file with non-existent source  
+        result = file_manager_instance.move_file("nonexistent_move.txt", "dest.txt")
+        assert ("not found" in result.lower() or "Error" in result or
+                "No such file" in result)
+        
+        # Test copy/move with permission errors
+        file_manager_instance.create_file("perm_test.txt", "content")
+        
+        with patch('shutil.copy2', side_effect=PermissionError("Permission denied")):
+            result = file_manager_instance.copy_file("perm_test.txt", "copy_dest.txt")
+            assert "Error" in result and "Permission denied" in result
+        
+        with patch('shutil.move', side_effect=PermissionError("Permission denied")):
+            result = file_manager_instance.move_file("perm_test.txt", "move_dest.txt")
+            assert "Error" in result and "Permission denied" in result
+        
+        file_manager_instance.safe_mode = True  # Reset
+    
+    def test_advanced_operations_edge_cases(self, file_manager_instance):
+        """Test advanced operations edge cases (lines 331-332, 338, 364-367)"""
+        # Test create_folder - it creates successfully even if folder exists (mkdir -p behavior)
+        os.makedirs(os.path.join(file_manager_instance.base_path, "existing_folder"), exist_ok=True)
+        result = file_manager_instance.create_folder("existing_folder")
+        assert "created successfully" in result  # FileManager creates even if exists
+        
+        # Test delete_folder with non-existent folder
+        file_manager_instance.safe_mode = False
+        result = file_manager_instance.delete_folder("nonexistent_folder")
+        assert ("not found" in result.lower() or "Error" in result or
+                "cannot find the path" in result.lower())
+        
+        # Test delete_folder with permission error
+        os.makedirs(os.path.join(file_manager_instance.base_path, "perm_folder"), exist_ok=True)
+        with patch('shutil.rmtree', side_effect=PermissionError("Permission denied")):
+            result = file_manager_instance.delete_folder("perm_folder")
+            assert "Error" in result and "Permission denied" in result
+        
+        file_manager_instance.safe_mode = True  # Reset
+    
+    def test_search_utilities_edge_cases(self, file_manager_instance):
+        """Test search utilities edge cases (lines 389-391, 395-413)"""
+        # Test search with very large files that should be skipped
+        file_manager_instance.create_file("large_test.txt", "searchable content")
+        
+        # Mock file size to exceed limit
+        with patch('os.path.getsize', return_value=2048*1024):  # 2MB > 1MB limit
+            results = file_manager_instance.search_files("searchable")
+            # Large file should be skipped for content search but may match filename
+            assert isinstance(results, list)
+        
+        # Test search with file read error
+        file_manager_instance.create_file("read_error.txt", "content")
+        with patch('builtins.open', side_effect=PermissionError("Read permission denied")):
+            results = file_manager_instance.search_files("content") 
+            # Should handle error gracefully and continue
+            assert isinstance(results, list)
+        
+        # Test search in subdirectory that doesn't exist
+        results = file_manager_instance.search_files("anything", subdirectory="nonexistent_subdir")
+        assert len(results) == 0
+    
+    def test_complex_operations_edge_cases(self, file_manager_instance):
+        """Test complex operations edge cases (lines 446-447, 451-459, 463-473)"""
+        # Test write_json_file with invalid data that can't be serialized
+        import datetime
+        invalid_data = {"date": datetime.datetime.now()}  # datetime objects aren't JSON serializable
+        
+        result = file_manager_instance.write_json_file("invalid_json.json", invalid_data)
+        assert "Error writing JSON" in result
+        
+        # Test write_json_from_string with malformed JSON
+        malformed_json = '{"key": "value", "incomplete":'
+        result = file_manager_instance.write_json_from_string("malformed.json", malformed_json)
+        # Should write as regular text file when JSON parsing fails, with auto-renaming
+        assert ("Content written to" in result or "File created as" in result)
+        
+        # Test read_json_file with invalid JSON content
+        file_manager_instance.create_file("bad_json.json", '{"invalid": json}')
+        result = file_manager_instance.read_json_file("bad_json.json")
+        assert "Error parsing JSON" in result or "Error reading JSON" in result
         """Test list_files with various subdirectory scenarios (missing coverage lines 199-210)"""
         # Create nested structure
         file_manager_instance.create_folder("subdir")

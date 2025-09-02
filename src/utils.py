@@ -7,6 +7,7 @@ import sys
 import time
 import platform
 import logging
+import shutil
 from tqdm import tqdm
 from .config import CONSTANTS
 
@@ -40,8 +41,6 @@ def detect_linux_package_manager_with_exceptions():
     # Check if we're on Linux
     if platform.system().lower() != 'linux':
         error = WorkspaceAIError(f"Package manager detection only works on Linux, current OS: {platform.system()}")
-        pass  # Simplified
-        pass  # Simplified
         logging.error(f"Package manager detection failed: {error}")
         raise error
     
@@ -59,9 +58,8 @@ def detect_linux_package_manager_with_exceptions():
         for manager, commands in managers.items():
             for cmd in commands:
                 try:
-                    # Use os.system to check if command exists
-                    result = os.system(f"which {cmd} > /dev/null 2>&1")
-                    if result == 0:
+                    # Use shutil.which to check if command exists (cross-platform)
+                    if shutil.which(cmd):
                         return manager
                 except OSError as e:
                     # Log individual command failures but continue
@@ -638,7 +636,6 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         # Check if software exists in database
         if software_lower not in install_db:
             error = WorkspaceAIError(f"Software '{software}' not found in database")
-        pass  # Simplified
             logging.error(f"Install command generation failed: {error}")
             raise error
         
@@ -693,8 +690,6 @@ def generate_install_commands_with_exceptions(software, method="auto"):
                             result += f"Linux ({method}):\n  {linux_cmds[method]}\n\n"
                         else:
                             error = WorkspaceAIError(f"Package manager '{method}' not supported for {software}")
-        pass  # Simplified
-        pass  # Simplified
                             logging.error(f"Install command generation failed: {error}")
                             raise error
             else:
@@ -704,8 +699,6 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         
         else:
             error = WorkspaceAIError(f"Unsupported operating system: {os_type}")
-        pass  # Simplified
-        pass  # Simplified
             logging.error(f"Install command generation failed: {error}")
             raise error
         
@@ -717,7 +710,5 @@ def generate_install_commands_with_exceptions(software, method="auto"):
             raise  # Re-raise our custom exceptions
             
         converted_error = handle_exception("install_command_generation", e)
-        pass  # Simplified
-        pass  # Simplified
         logging.error(f"Install command generation failed: {converted_error}")
         raise converted_error

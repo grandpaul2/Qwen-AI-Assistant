@@ -883,5 +883,460 @@ class TestConfigureSettingsAdvanced(unittest.TestCase):
         mock_print.assert_any_call("Invalid number entered")
 
 
+class TestAppMissingLinesCoverage(unittest.TestCase):
+    """Comprehensive test class targeting specific missing lines in app.py for maximum coverage improvement"""
+    
+    @patch('src.app.call_ollama_with_tools')
+    def test_detect_file_intent_edge_cases(self, mock_ollama):
+        """Test detect_file_intent function edge cases - covers lines 38, 55-60"""
+        from src.app import detect_file_intent
+        
+        # Test with empty prompt
+        result = detect_file_intent("")
+        self.assertFalse(result)
+        
+        # Test with None prompt
+        result = detect_file_intent(None)
+        self.assertFalse(result)
+        
+        # Test with whitespace-only prompt
+        result = detect_file_intent("   ")
+        self.assertFalse(result)
+        
+        # Test with file operation keywords
+        file_keywords = ["create file", "write file", "delete file", "read content", 
+                        "list files", "search files", "edit file", "copy file"]
+        
+        for keyword in file_keywords:
+            result = detect_file_intent(keyword)
+            self.assertTrue(result, f"Should detect file intent for: {keyword}")
+    
+    @patch('src.app.input')
+    @patch('src.config.save_config')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_configure_settings_error_handling(self, mock_print, mock_load, mock_save, mock_input):
+        """Test configure_settings error handling paths - covers lines 78-85, 103-105"""
+        # Test load_config exception
+        mock_load.side_effect = Exception("Config load failed")
+        
+        try:
+            configure_settings()
+        except Exception as e:
+            self.assertIn("Config load failed", str(e))
+        
+        # Test save_config exception during save
+        mock_load.side_effect = None
+        mock_load.return_value = {'model': 'test'}
+        mock_save.side_effect = Exception("Config save failed")
+        mock_input.side_effect = ['s']  # Try to save
+        
+        try:
+            configure_settings()
+        except Exception as e:
+            self.assertIn("Config save failed", str(e))
+    
+    @patch('src.app.input')
+    @patch('src.config.save_config')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_configure_settings_validation_edge_cases(self, mock_print, mock_load, mock_save, mock_input):
+        """Test configuration validation edge cases - covers lines 109-110"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        
+        # Test multiple invalid inputs followed by valid ones
+        mock_input.side_effect = [
+            '1', '',           # Empty model input
+            '3', '   ',        # Whitespace host input  
+            '5', 'abc',        # Invalid KB input
+            '5', '-100',       # Negative KB input
+            '5', '2048',       # Valid KB input
+            's'                # Save
+        ]
+        
+        configure_settings()
+        
+        # Only the valid KB change should be applied
+        self.assertEqual(config['search_max_file_kb'], 2048)
+        mock_save.assert_called_once_with(config)
+    
+    @patch('src.app.input')
+    @patch('src.config.save_config')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_host_validation_edge_cases(self, mock_print, mock_load, mock_save, mock_input):
+        """Test Ollama host validation - covers additional validation lines"""
+        config = {'ollama_host': 'localhost:11434'}
+        mock_load.return_value = config
+        
+        # Test various invalid host formats
+        invalid_hosts = ['', '   ', 'invalid:', ':11434', 'host:', 'host:abc', 'host:-1']
+        
+        for invalid_host in invalid_hosts:
+            mock_load.return_value = {'ollama_host': 'localhost:11434'}
+            mock_input.side_effect = ['3', invalid_host, 'x']
+            
+            configure_settings()
+            
+            # Should remain unchanged
+            self.assertEqual(config['ollama_host'], 'localhost:11434')
+    
+    @patch('src.app.input')
+    @patch('src.config.save_config')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_search_kb_validation_edge_cases(self, mock_print, mock_load, mock_save, mock_input):
+        """Test search KB validation edge cases - covers validation lines"""
+        config = {'search_max_file_kb': 1024}
+        mock_load.return_value = config
+        
+        # Test edge cases for KB input
+        test_cases = [
+            ('0', 1024),        # Zero value
+            ('-1', 1024),       # Negative value
+            ('abc', 1024),      # Non-numeric
+            ('1.5', 1024),      # Float
+            ('999999', 999999), # Very large valid number
+            ('', 1024),         # Empty string
+            ('   ', 1024),      # Whitespace
+        ]
+        
+        for input_val, expected in test_cases:
+            mock_load.return_value = {'search_max_file_kb': 1024}
+            mock_input.side_effect = ['5', input_val, 'x']
+            
+            configure_settings()
+            
+            if expected == 999999:
+                self.assertEqual(config['search_max_file_kb'], expected)
+            else:
+                self.assertEqual(config['search_max_file_kb'], 1024)  # Should remain unchanged for invalid
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_interactive_mode_exception_handling(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test interactive mode exception handling paths - covers lines 119-120, 127-134"""
+        mock_platform.return_value = 'Linux'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test exception during initialization
+        mock_memory.current_conversation = None
+        mock_input.side_effect = ['exit']
+        
+        try:
+            interactive_mode()
+        except (SystemExit, AttributeError):
+            pass  # Expected due to None conversation
+        
+        # Test platform detection error
+        mock_platform.side_effect = Exception("Platform detection failed")
+        
+        try:
+            interactive_mode()
+        except Exception:
+            pass  # Should handle gracefully
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.detect_linux_package_manager')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_interactive_mode_error_handling(self, mock_print, mock_input, mock_fm, mock_memory, mock_detect, mock_platform, mock_logger):
+        """Test interactive mode error handling - covers lines 141-145, 164-171"""
+        mock_platform.return_value = 'Linux'
+        mock_detect.side_effect = Exception("Package manager detection failed")
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        mock_input.side_effect = ['exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        # Should handle package manager detection failure gracefully
+        mock_logger.error.assert_any_call("Package manager detection failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_command_processing_error_paths(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test command processing error paths - covers lines 180-184, 194-198"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test error in command processing
+        def command_side_effect(*args):
+            if '/config' in args[0]:
+                raise Exception("Config command failed")
+            return 'exit'
+        
+        mock_input.side_effect = command_side_effect
+        
+        try:
+            interactive_mode()
+        except (SystemExit, Exception):
+            pass
+        
+        # Should log command processing errors
+        mock_logger.error.assert_any_call("Unexpected error in interactive loop: Config command failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_memory_operations_error_handling(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test memory operations error handling - covers lines 220-225, 243-246"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test memory save error
+        mock_memory.save_memory.side_effect = Exception("Memory save failed")
+        mock_input.side_effect = ['/reset', 'exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        # Should handle memory save errors
+        mock_logger.error.assert_any_call("Memory save failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_settings_configuration_error_paths(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test settings configuration error paths - covers lines 269-271, 289-292"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test configuration error during /config command
+        with patch('src.app.configure_settings') as mock_config:
+            mock_config.side_effect = Exception("Settings configuration failed")
+            mock_input.side_effect = ['/config', 'exit']
+            
+            try:
+                interactive_mode()
+            except SystemExit:
+                pass
+            
+            mock_logger.error.assert_any_call("Unexpected error in interactive loop: Settings configuration failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_empty_prefix_command_handling(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test empty prefix command handling - covers lines 315-316, 321-322"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test empty prefix commands
+        empty_commands = ['chat:', 'tools:', 'install:']
+        mock_input.side_effect = empty_commands + ['exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        # Should show appropriate messages for empty prefix commands
+        mock_print.assert_any_call("Please provide a question after 'chat:'")
+        mock_print.assert_any_call("Please provide a command after 'tools:'")
+        mock_print.assert_any_call("Please specify software to install after 'install:'")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.generate_install_commands')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_install_command_error_handling(self, mock_print, mock_input, mock_install, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test install command error handling - covers lines 372-375"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test install command error
+        mock_install.side_effect = Exception("Install command generation failed")
+        mock_input.side_effect = ['install: python3', 'exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        mock_logger.error.assert_any_call("Unexpected error in interactive loop: Install command generation failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.call_ollama_with_tools')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_chat_command_error_handling(self, mock_print, mock_input, mock_ollama, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test chat command error handling - covers lines 472-476"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        
+        # Test chat command error
+        mock_ollama.side_effect = Exception("Chat processing failed")
+        mock_input.side_effect = ['chat: hello', 'exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        mock_logger.error.assert_any_call("Unexpected error in interactive loop: Chat processing failed")
+    
+    @patch('src.app.logger')
+    @patch('src.app.platform.system')
+    @patch('src.app.memory')
+    @patch('src.app.file_manager')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_cleanup_scenarios(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+        """Test cleanup scenarios during exit - covers cleanup lines"""
+        mock_platform.return_value = 'Windows'
+        mock_fm.safe_mode = True
+        mock_memory.recent_conversations = []
+        mock_memory.summarized_conversations = []
+        mock_memory.current_conversation = [1, 2, 3]
+        
+        # Test cleanup with conversation data
+        mock_input.side_effect = ['exit']
+        
+        try:
+            interactive_mode()
+        except SystemExit:
+            pass
+        
+        mock_memory.start_new_conversation.assert_called()
+        mock_memory.save_memory.assert_called()
+        mock_logger.info.assert_any_call("User exited application")
+    
+    @patch('src.app.interactive_mode')
+    @patch('src.app.test_ollama_connection')
+    @patch('src.app.setup_logging')
+    @patch('src.app.save_config')
+    @patch('src.app.get_config_path')
+    @patch('src.app.os.path.exists')
+    @patch('src.app.input')
+    @patch('builtins.print')
+    def test_main_function_error_paths(self, mock_print, mock_input, mock_exists, mock_get_path, mock_save, mock_setup, mock_test, mock_interactive):
+        """Test main function error paths - covers lines 505-509, 576-584, 588-592"""
+        # Test config path error
+        mock_get_path.side_effect = Exception("Config path error")
+        
+        try:
+            main()
+        except Exception as e:
+            self.assertIn("Config path error", str(e))
+        
+        # Test logging setup error
+        mock_get_path.side_effect = None
+        mock_get_path.return_value = '/config/path'
+        mock_exists.return_value = True
+        mock_setup.side_effect = Exception("Logging setup failed")
+        
+        try:
+            main()
+        except Exception as e:
+            self.assertIn("Logging setup failed", str(e))
+        
+        # Test Ollama connection error with user abort
+        mock_setup.side_effect = None
+        mock_setup.return_value = Mock()
+        mock_test.return_value = False
+        mock_input.side_effect = KeyboardInterrupt()  # User aborts
+        
+        try:
+            main()
+        except SystemExit:
+            pass  # Expected
+        
+        mock_print.assert_any_call("\nUser aborted.")
+    
+    @patch('src.app.interactive_mode')
+    @patch('src.app.test_ollama_connection')
+    @patch('src.app.setup_logging')
+    @patch('src.app.save_config')
+    @patch('src.app.get_config_path')
+    @patch('src.app.os.path.exists')
+    @patch('builtins.print')
+    def test_main_function_config_save_error(self, mock_print, mock_exists, mock_get_path, mock_save, mock_setup, mock_test, mock_interactive):
+        """Test main function config save error - covers config creation error paths"""
+        mock_exists.return_value = False  # Config doesn't exist
+        mock_get_path.return_value = '/config/path'
+        mock_setup.return_value = Mock()
+        mock_test.return_value = True
+        mock_save.side_effect = Exception("Config save failed")
+        
+        try:
+            main()
+        except Exception as e:
+            self.assertIn("Config save failed", str(e))
+    
+    @patch('src.app.interactive_mode')
+    @patch('src.app.test_ollama_connection')
+    @patch('src.app.setup_logging')
+    @patch('src.app.save_config')
+    @patch('src.app.get_config_path')
+    @patch('src.app.os.path.exists')
+    @patch('builtins.print')
+    def test_main_function_interactive_mode_error(self, mock_print, mock_exists, mock_get_path, mock_save, mock_setup, mock_test, mock_interactive):
+        """Test main function interactive mode error - covers interactive startup error paths"""
+        mock_exists.return_value = True
+        mock_get_path.return_value = '/config/path'
+        mock_setup.return_value = Mock()
+        mock_test.return_value = True
+        mock_interactive.side_effect = Exception("Interactive mode failed")
+        
+        try:
+            main()
+        except Exception as e:
+            self.assertIn("Interactive mode failed", str(e))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -6,7 +6,7 @@ Tests the connection testing utilities for WorkspaceAI
 import unittest
 from unittest.mock import patch, Mock, MagicMock
 
-from src.ollama.connection_test import test_ollama_connection
+from src.ollama_connection_test import test_ollama_connection
 
 
 class TestOllamaConnectionTest(unittest.TestCase):

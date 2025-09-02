@@ -12,9 +12,9 @@ import logging
 from .config import APP_CONFIG, setup_logging, save_config, get_config_path, update_logging_level
 from .memory import memory
 from .file_manager import file_manager
-from .ollama.universal_interface import call_ollama_with_tools
-from .ollama.connection_test import test_ollama_connection
-# from .utils import detect_linux_package_manager, generate_install_commands  # Temporarily disabled due to syntax errors
+from .ollama_universal_interface import call_ollama_with_tools
+from .ollama_connection_test import test_ollama_connection
+from .utils import detect_linux_package_manager, generate_install_commands
 from .exceptions import (
     WorkspaceAIError, ConfigurationError, OllamaConnectionError,
     handle_exception, log_and_raise
@@ -22,6 +22,30 @@ from .exceptions import (
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def detect_file_intent(user_input):
+    """
+    Detect if user input requires file operations or tools
+    
+    Args:
+        user_input: The user's input string
+    
+    Returns:
+        bool: True if tools should be used, False otherwise
+    """
+    if not user_input:
+        return False
+    
+    # Keywords that suggest file operations or tool usage
+    tool_keywords = [
+        'create', 'write', 'save', 'file', 'folder', 'directory',
+        'read', 'open', 'edit', 'modify', 'delete', 'remove',
+        'list', 'search', 'find', 'install', 'run', 'execute'
+    ]
+    
+    user_lower = user_input.lower()
+    return any(keyword in user_lower for keyword in tool_keywords)
 
 
 def configure_settings():
@@ -240,8 +264,7 @@ def interactive_mode_with_exceptions():
         # Show detected package manager on Linux with error handling
         if platform.system() == "Linux":
             try:
-                # detected_pm = detect_linux_package_manager()  # Temporarily disabled
-                detected_pm = None
+                detected_pm = detect_linux_package_manager()
                 print(f"Package manager: {detected_pm if detected_pm else 'Not detected'}")
             except Exception as e:
                 logging.warning(f"Package manager detection failed: {e}")
@@ -413,10 +436,38 @@ def interactive_mode_with_exceptions():
                 else:
                     print("Please provide a command after 't:'")
                     
+            elif prompt.lower().startswith('tools:'):
+                actual_prompt = prompt[6:].strip()
+                if actual_prompt:
+                    try:
+                        call_ollama_with_tools(actual_prompt, use_tools=True)
+                        print()  # Add blank line after bot response
+                    except Exception as e:
+                        converted_error = handle_exception("tools_mode", e)
+                        logging.error(f"Tools mode failed: {converted_error}")
+                        print(f"Error in tools mode: {str(e)}")
+                else:
+                    print("Please provide a command after 'tools:'")
+                    
+            elif prompt.lower().startswith('install:'):
+                software_name = prompt[8:].strip()
+                if software_name:
+                    try:
+                        install_commands = generate_install_commands(software_name)
+                        print(install_commands)
+                    except Exception as e:
+                        converted_error = handle_exception("install_mode", e)
+                        logging.error(f"Install mode failed: {converted_error}")
+                        print(f"Error generating install commands: {str(e)}")
+                else:
+                    print("Please provide a software name after 'install:'")
+                    
             else:
-                # Default behavior: chat mode only (no tools unless explicitly requested)
+                # Default behavior: use tool detection to determine if tools are needed
                 try:
-                    call_ollama_with_tools(prompt, use_tools=False)
+                    use_tools = detect_file_intent(prompt)
+                    logger.info(f"Tool detection: '{prompt[:50]}...' -> use_tools={use_tools}")
+                    call_ollama_with_tools(prompt, use_tools=use_tools)
                     print()  # Add blank line after bot response
                 except Exception as e:
                     converted_error = handle_exception("chat_mode", e)

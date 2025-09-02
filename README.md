@@ -5,11 +5,12 @@ AI assistant with universal tool system and secure file management. Features mod
 ## 🚀 What's New in v3.0
 
 - **Modular Architecture**: Clean separation of concerns with dedicated modules
+- **Flattened Structure**: Simplified from nested folders to flat organization
 - **Universal Tool Handler**: Enhanced dynamic tool execution engine  
-- **Comprehensive Testing**: 91.4% test coverage with 212+ passing tests
 - **Enhanced Tool Instructions**: Context-aware instruction system
 - **Improved Error Handling**: Robust exception management
 - **Configuration Management**: Advanced settings and path management
+- **Structural Cleanup**: Eliminated duplicates, single test per module
 
 ## Quick Start
 
@@ -88,11 +89,11 @@ t: to use tools
 - exit        Quit
 ```
 
-## Architecture v3.0 - Modular Design
+## Architecture v3.0 - Flattened Modular Design
 
 ```
 main.py               # Entry point
-src/                  # Core modular architecture
+src/                  # Core modular architecture (flat structure)
 ├── app.py            # Main application logic and interface
 ├── config.py         # Configuration management and constants
 ├── memory.py         # Conversation memory and persistence
@@ -104,21 +105,27 @@ src/                  # Core modular architecture
 ├── exceptions.py     # Comprehensive error handling
 ├── progress.py       # Progress display and tracking
 ├── software_installer.py  # System software installation
-└── ollama/           # Ollama integration modules
-    ├── client.py     # Ollama API client with connection management
-    ├── universal_interface.py  # Main Ollama interface
-    └── connection_test.py      # Connection testing utilities
+├── ollama_client.py  # Ollama API client with connection management
+├── ollama_universal_interface.py  # Main Ollama interface
+└── ollama_connection_test.py      # Connection testing utilities
 
-tests/                # Comprehensive testing suite (91.4% coverage)
+tests/                # Comprehensive testing suite
 ├── conftest.py       # Test configuration and fixtures
 ├── unit/             # Unit tests for all modules
-│   ├── test_app.py                    # Application logic tests
-│   ├── test_config.py                 # Configuration tests (100% pass)
-│   ├── test_universal_tool_handler.py # Tool handler tests (100% pass)
-│   ├── test_enhanced_tool_instructions.py # Instructions tests
-│   ├── test_file_manager.py           # File operations tests
-│   ├── test_memory.py                 # Memory system tests
-│   └── test_ollama_client.py          # Ollama client tests (100% pass)
+│   ├── test_app.py                         # Application logic tests
+│   ├── test_config.py                      # Configuration tests
+│   ├── test_enhanced_tool_instructions.py  # Tool instructions tests
+│   ├── test_exceptions.py                  # Exception handling tests
+│   ├── test_file_manager.py                # File operations tests
+│   ├── test_memory.py                      # Memory system tests
+│   ├── test_ollama_client.py               # Ollama client tests
+│   ├── test_ollama_connection_test.py      # Ollama connection tests
+│   ├── test_ollama_universal_interface.py  # Ollama interface tests
+│   ├── test_progress.py                    # Progress display tests
+│   ├── test_software_installer.py          # Software installer tests
+│   ├── test_tool_schemas.py                # Tool schema tests
+│   ├── test_universal_tool_handler.py      # Tool handler tests
+│   └── test_utils.py                       # Utility function tests
 ├── security/         # Security and safety tests
 └── system/           # Integration and system tests
 
@@ -133,12 +140,6 @@ archive/              # Historical components and old tests
 ```
 
 ## 🧪 Testing Suite
-
-### Test Coverage Status
-- **Total Tests**: 232 tests
-- **Passing**: 212 tests ✅
-- **Success Rate**: **91.4%** 🎉
-- **Perfect Modules**: Universal Tool Handler, Config, Ollama Client
 
 ### Running Tests
 ```bash

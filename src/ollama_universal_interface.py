@@ -10,12 +10,12 @@ import logging
 import os
 from typing import Dict, Any, Optional, List
 
-from .client import OllamaClient
-from ..universal_tool_handler import handle_any_tool_call
-from ..memory import memory
-from ..config import load_config, get_workspace_path
-from ..progress import show_progress
-from ..enhanced_tool_instructions import build_enhanced_tool_instruction, get_context_aware_tool_schemas, build_context_aware_instruction
+from .ollama_client import OllamaClient
+from .universal_tool_handler import handle_any_tool_call
+from .memory import memory
+from .config import load_config, get_workspace_path
+from .progress import show_progress
+from .enhanced_tool_instructions import build_enhanced_tool_instruction, get_context_aware_tool_schemas, build_context_aware_instruction
 
 logger = logging.getLogger(__name__)
 

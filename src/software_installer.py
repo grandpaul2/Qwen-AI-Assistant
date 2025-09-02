@@ -595,6 +595,7 @@ def get_system_info_with_exceptions() -> Dict[str, Any]:
         info = {
             "os": "unknown",
             "os_version": "unknown",
+            "release": "unknown",
             "architecture": "unknown", 
             "python_version": "unknown",
             "package_manager": None,
@@ -614,6 +615,11 @@ def get_system_info_with_exceptions() -> Dict[str, Any]:
             info["os_version"] = platform.version()
         except Exception as e:
             logging.warning(f"Could not get OS version: {e}")
+            
+        try:
+            info["release"] = platform.release()
+        except Exception as e:
+            logging.warning(f"Could not get OS release: {e}")
             
         try:
             info["architecture"] = platform.machine()

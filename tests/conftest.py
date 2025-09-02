@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from src.config import APP_CONFIG
 from src.file_manager import FileManager
 from src.memory import MemoryManager
-from src.ollama.client import OllamaClient
+from src.ollama_client import OllamaClient
 
 
 @pytest.fixture(scope="session")
