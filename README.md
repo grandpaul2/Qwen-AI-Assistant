@@ -10,8 +10,6 @@ Download only these files from the repository:
 - `main.py`
 - `requirements.txt`
 
-Everything else (workspace, config, dependencies) will be created automatically.
-
 ### Setup
 ```bash
 # 1. Install Ollama and load model
