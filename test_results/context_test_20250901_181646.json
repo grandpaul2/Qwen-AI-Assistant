@@ -1,0 +1,18 @@
+{
+  "test_type": "context_awareness",
+  "timestamp": "2025-09-01T18:16:46.956181",
+  "sequence": [
+    "Create a Python script called data_processor.py",
+    "Add error handling to that script",
+    "Create a test file for it",
+    "Show me both files"
+  ],
+  "scores": [
+    6.0,
+    9.0,
+    10.0,
+    9.0
+  ],
+  "average_score": 8.5,
+  "status": "PASS"
+}

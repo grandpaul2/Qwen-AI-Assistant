@@ -1,0 +1,27 @@
+{
+  "test_type": "single_complex_scenario",
+  "timestamp": "2025-09-01T18:18:58.724345",
+  "scenario": "Create a complete Python project structure with src/, tests/, docs/, and all the standard config files. Make it ready for git.",
+  "tool_selection": {
+    "primary_tool": "create_folder",
+    "tool_sequence": [
+      "create_folder",
+      "create_file",
+      "create_folder",
+      "create_file"
+    ],
+    "is_multi_step": true,
+    "estimated_steps": 4,
+    "step_descriptions": [
+      "Create main project directory",
+      "Create README.md",
+      "Create subdirectories",
+      "Create project files"
+    ],
+    "operation_type": "CREATE_PROJECT_STRUCTURE",
+    "confidence": 1.0,
+    "selection_method": "multi_step_planning"
+  },
+  "score": 8.0,
+  "status": "PASS"
+}

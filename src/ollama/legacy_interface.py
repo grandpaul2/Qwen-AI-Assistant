@@ -12,7 +12,7 @@ from .tool_executor import ToolExecutor, get_default_executor
 from .response_formatter import ResponseFormatter
 from ..config import load_config
 from ..memory import memory
-from ..intent_classifier import IntentClassifier
+from ..enhanced_intent_classifier import IntentClassifier
 from ..tool_selector import ContextWeightedToolSelector
 from ..tool_schemas import get_all_tool_schemas
 

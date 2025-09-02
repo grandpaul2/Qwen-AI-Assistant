@@ -51,13 +51,11 @@ def configure_settings_with_exceptions():
         config = load_config()
         if config is None:
             error = ConfigurationError("Failed to load configuration")
-            error.context["function"] = "configure_settings"
             logging.error(f"Configuration failed: {error}")
             raise error
         
     except Exception as e:
         converted_error = handle_exception("config_loading", e)
-        converted_error.context["function"] = "configure_settings"
         logging.error(f"Configuration loading failed: {converted_error}")
         raise converted_error
     
@@ -209,7 +207,6 @@ def configure_settings_with_exceptions():
                 
     except Exception as e:
         converted_error = handle_exception("configuration_menu", e)
-        converted_error.context["function"] = "configure_settings"
         logging.error(f"Configuration menu failed: {converted_error}")
         raise converted_error
 def interactive_mode():
@@ -264,7 +261,6 @@ def interactive_mode_with_exceptions():
 
     except Exception as e:
         converted_error = handle_exception("interactive_mode_setup", e)
-        converted_error.context["function"] = "interactive_mode"
         logging.error(f"Interactive mode setup failed: {converted_error}")
         raise converted_error
 
@@ -495,8 +491,6 @@ def main_with_exceptions():
                 logging.info("Created default configuration file")
             except Exception as e:
                 error = ConfigurationError(f"Failed to create default configuration: {str(e)}")
-                error.context["config_path"] = config_path
-                error.context["app_config"] = str(APP_CONFIG)
                 logging.error(f"Configuration creation failed: {error}")
                 raise error
         
@@ -538,12 +532,10 @@ def main_with_exceptions():
             
         except Exception as e:
             converted_error = handle_exception("interactive_mode", e)
-            converted_error.context["function"] = "main"
             logging.error(f"Interactive mode failed: {converted_error}")
             raise converted_error
             
     except Exception as e:
         converted_error = handle_exception("main_application", e)
-        converted_error.context["function"] = "main"
         logging.critical(f"Main application failed: {converted_error}")
         raise converted_error

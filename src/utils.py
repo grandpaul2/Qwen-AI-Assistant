@@ -12,11 +12,6 @@ from .config import CONSTANTS
 
 # Import custom exceptions
 from .exceptions import (
-    FileSystemError,
-    FilePermissionError,
-    FileNotFoundError,
-    UnsupportedPlatformError,
-    PackageManagerError,
     WorkspaceAIError,
     handle_exception
 )
@@ -39,14 +34,14 @@ def detect_linux_package_manager_with_exceptions():
         str or None: Package manager name if found, None if none found
         
     Raises:
-        UnsupportedPlatformError: If not on Linux
-        PackageManagerError: If package manager detection fails
+        WorkspaceAIError: If not on Linux
+        WorkspaceAIError: If package manager detection fails
     """
     # Check if we're on Linux
     if platform.system().lower() != 'linux':
-        error = UnsupportedPlatformError(f"Package manager detection only works on Linux, current OS: {platform.system()}")
-        error.context["current_os"] = platform.system()
-        error.context["supported_os"] = "Linux"
+        error = WorkspaceAIError(f"Package manager detection only works on Linux, current OS: {platform.system()}")
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Package manager detection failed: {error}")
         raise error
     
@@ -79,7 +74,7 @@ def detect_linux_package_manager_with_exceptions():
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("package_manager_detection", e)
-        converted_error.context["attempted_managers"] = list(managers.keys())
+        converted_errorpass  # Simplified
         logging.error(f"Package manager detection failed: {converted_error}")
         raise converted_error
 
@@ -107,14 +102,14 @@ def show_progress_with_exceptions(description, duration=None):
     # Input validation
     if description is None:
         error = WorkspaceAIError("Description cannot be None for progress display")
-        error.context["description"] = description
+        errorpass  # Simplified
         logging.error(f"Progress display failed: {error}")
         raise error
         
     if not isinstance(description, str):
         error = WorkspaceAIError(f"Description must be a string, got {type(description).__name__}")
-        error.context["description_type"] = type(description).__name__
-        error.context["description_value"] = str(description)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Progress display failed: {error}")
         raise error
     
@@ -128,21 +123,21 @@ def show_progress_with_exceptions(description, duration=None):
     
     if not isinstance(duration, (int, float)):
         error = WorkspaceAIError(f"Duration must be a number, got {type(duration).__name__}")
-        error.context["duration_type"] = type(duration).__name__
-        error.context["duration_value"] = str(duration)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Progress display failed: {error}")
         raise error
         
     if duration < 0:
         error = WorkspaceAIError(f"Duration cannot be negative: {duration}")
-        error.context["duration"] = duration
+        errorpass  # Simplified
         logging.error(f"Progress display failed: {error}")
         raise error
         
     if duration > 300:  # 5 minutes max
         error = WorkspaceAIError(f"Duration too long: {duration} seconds (max 300)")
-        error.context["duration"] = duration
-        error.context["max_duration"] = 300
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Progress display failed: {error}")
         raise error
 
@@ -163,8 +158,8 @@ def show_progress_with_exceptions(description, duration=None):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("progress_display", e)
-        converted_error.context["description"] = description[:100] if description else None
-        converted_error.context["duration"] = duration
+        converted_errorpass  # Simplified
+        converted_errorpass  # Simplified
         logging.error(f"Progress display failed: {converted_error}")
         raise converted_error
 
@@ -198,8 +193,8 @@ def is_safe_filename_with_exceptions(filename):
     # Check type
     if not isinstance(filename, str):
         error = WorkspaceAIError(f"Filename must be a string, got {type(filename).__name__}")
-        error.context["filename_type"] = type(filename).__name__
-        error.context["filename_value"] = str(filename)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Filename safety check failed: {error}")
         raise error
     
@@ -233,7 +228,7 @@ def is_safe_filename_with_exceptions(filename):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("filename_safety_check", e)
-        converted_error.context["filename"] = filename[:100] if filename else None
+        converted_errorpass  # Simplified
         logging.error(f"Filename safety check failed: {converted_error}")
         raise converted_error
 
@@ -267,8 +262,8 @@ def sanitize_filename_with_exceptions(filename):
     # Check type
     if not isinstance(filename, str):
         error = WorkspaceAIError(f"Filename must be a string, got {type(filename).__name__}")
-        error.context["filename_type"] = type(filename).__name__
-        error.context["filename_value"] = str(filename)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Filename sanitization failed: {error}")
         raise error
     
@@ -296,7 +291,7 @@ def sanitize_filename_with_exceptions(filename):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("filename_sanitization", e)
-        converted_error.context["original_filename"] = filename[:100] if filename else None
+        converted_errorpass  # Simplified
         logging.error(f"Filename sanitization failed: {converted_error}")
         raise converted_error
 
@@ -323,46 +318,46 @@ def get_unique_filename_with_exceptions(directory, base_filename):
         str: Unique filename that doesn't exist in the directory
         
     Raises:
-        FileSystemError: For directory or filename issues
+        WorkspaceAIError: For directory or filename issues
         WorkspaceAIError: For validation errors
     """
     # Validate inputs
     if directory is None:
-        error = FileSystemError("Directory cannot be None")
-        error.context["function"] = "get_unique_filename"
+        error = WorkspaceAIError("Directory cannot be None")
+        errorpass  # Simplified
         logging.error(f"Unique filename generation failed: {error}")
         raise error
         
     if base_filename is None:
         error = WorkspaceAIError("Base filename cannot be None")
-        error.context["function"] = "get_unique_filename"
+        errorpass  # Simplified
         logging.error(f"Unique filename generation failed: {error}")
         raise error
     
     # Check types
     if not isinstance(directory, str):
-        error = FileSystemError(f"Directory must be a string, got {type(directory).__name__}")
-        error.context["directory_type"] = type(directory).__name__
+        error = WorkspaceAIError(f"Directory must be a string, got {type(directory).__name__}")
+        errorpass  # Simplified
         logging.error(f"Unique filename generation failed: {error}")
         raise error
         
     if not isinstance(base_filename, str):
         error = WorkspaceAIError(f"Base filename must be a string, got {type(base_filename).__name__}")
-        error.context["filename_type"] = type(base_filename).__name__
+        errorpass  # Simplified
         logging.error(f"Unique filename generation failed: {error}")
         raise error
     
     try:
         # Check if directory exists
         if not os.path.exists(directory):
-            error = FileSystemError(f"Directory does not exist: {directory}")
-            error.context["directory"] = directory
+            error = WorkspaceAIError(f"Directory does not exist: {directory}")
+            errorpass  # Simplified
             logging.error(f"Unique filename generation failed: {error}")
             raise error
             
         if not os.path.isdir(directory):
-            error = FileSystemError(f"Path is not a directory: {directory}")
-            error.context["directory"] = directory
+            error = WorkspaceAIError(f"Path is not a directory: {directory}")
+            errorpass  # Simplified
             logging.error(f"Unique filename generation failed: {error}")
             raise error
         
@@ -388,8 +383,8 @@ def get_unique_filename_with_exceptions(directory, base_filename):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("unique_filename_generation", e)
-        converted_error.context["directory"] = directory
-        converted_error.context["base_filename"] = base_filename
+        converted_errorpass  # Simplified
+        converted_errorpass  # Simplified
         logging.error(f"Unique filename generation failed: {converted_error}")
         raise converted_error
 
@@ -419,22 +414,22 @@ def bytes_to_human_readable_with_exceptions(size_bytes):
     # Handle None input
     if size_bytes is None:
         error = WorkspaceAIError("Size bytes cannot be None")
-        error.context["function"] = "bytes_to_human_readable"
+        errorpass  # Simplified
         logging.error(f"Bytes conversion failed: {error}")
         raise error
     
     # Check if it's a number
     if not isinstance(size_bytes, (int, float)):
         error = WorkspaceAIError(f"Size bytes must be a number, got {type(size_bytes).__name__}")
-        error.context["size_type"] = type(size_bytes).__name__
-        error.context["size_value"] = str(size_bytes)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Bytes conversion failed: {error}")
         raise error
     
     # Check for negative values
     if size_bytes < 0:
         error = WorkspaceAIError(f"Size bytes cannot be negative: {size_bytes}")
-        error.context["size_bytes"] = size_bytes
+        errorpass  # Simplified
         logging.error(f"Bytes conversion failed: {error}")
         raise error
     
@@ -462,7 +457,7 @@ def bytes_to_human_readable_with_exceptions(size_bytes):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("bytes_conversion", e)
-        converted_error.context["size_bytes"] = size_bytes
+        converted_errorpass  # Simplified
         logging.error(f"Bytes conversion failed: {converted_error}")
         raise converted_error
 
@@ -498,8 +493,8 @@ def validate_json_string_with_exceptions(json_str):
     # Check type
     if not isinstance(json_str, str):
         error = WorkspaceAIError(f"JSON string must be a string, got {type(json_str).__name__}")
-        error.context["json_type"] = type(json_str).__name__
-        error.context["json_value"] = str(json_str)[:100]  # Limit context size
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"JSON validation failed: {error}")
         raise error
     
@@ -507,8 +502,8 @@ def validate_json_string_with_exceptions(json_str):
     max_size = 10 * 1024 * 1024  # 10MB limit
     if len(json_str) > max_size:
         error = WorkspaceAIError(f"JSON string too large: {len(json_str)} bytes (max {max_size})")
-        error.context["json_size"] = len(json_str)
-        error.context["max_size"] = max_size
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"JSON validation failed: {error}")
         raise error
     
@@ -524,7 +519,7 @@ def validate_json_string_with_exceptions(json_str):
     except Exception as e:
         # Handle unexpected errors
         converted_error = handle_exception("json_validation", e)
-        converted_error.context["json_preview"] = json_str[:100] if json_str else None
+        converted_errorpass  # Simplified
         logging.error(f"JSON validation failed: {converted_error}")
         raise converted_error
 
@@ -552,19 +547,19 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         
     Raises:
         WorkspaceAIError: For input validation issues
-        UnsupportedPlatformError: For unsupported operating systems
+        WorkspaceAIError: For unsupported operating systems
     """
     # Validate inputs
     if software is None:
         error = WorkspaceAIError("Software name cannot be None")
-        error.context["function"] = "generate_install_commands"
+        errorpass  # Simplified
         logging.error(f"Install command generation failed: {error}")
         raise error
         
     if not isinstance(software, str):
         error = WorkspaceAIError(f"Software name must be a string, got {type(software).__name__}")
-        error.context["software_type"] = type(software).__name__
-        error.context["software_value"] = str(software)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Install command generation failed: {error}")
         raise error
     
@@ -573,8 +568,8 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         
     if not isinstance(method, str):
         error = WorkspaceAIError(f"Method must be a string, got {type(method).__name__}")
-        error.context["method_type"] = type(method).__name__
-        error.context["method_value"] = str(method)
+        errorpass  # Simplified
+        errorpass  # Simplified
         logging.error(f"Install command generation failed: {error}")
         raise error
     
@@ -653,8 +648,8 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         # Check if software exists in database
         if software_lower not in install_db:
             error = WorkspaceAIError(f"Software '{software}' not found in database")
-            error.context["software"] = software
-            error.context["available_software"] = list(install_db.keys())
+            errorpass  # Simplified
+            errorpass  # Simplified
             logging.error(f"Install command generation failed: {error}")
             raise error
         
@@ -709,9 +704,9 @@ def generate_install_commands_with_exceptions(software, method="auto"):
                             result += f"Linux ({method}):\n  {linux_cmds[method]}\n\n"
                         else:
                             error = WorkspaceAIError(f"Package manager '{method}' not supported for {software}")
-                            error.context["method"] = method
-                            error.context["software"] = software
-                            error.context["available_methods"] = list(linux_cmds.keys())
+                            errorpass  # Simplified
+                            errorpass  # Simplified
+                            errorpass  # Simplified
                             logging.error(f"Install command generation failed: {error}")
                             raise error
             else:
@@ -720,10 +715,10 @@ def generate_install_commands_with_exceptions(software, method="auto"):
             result += f"Alternative: {software_data.get('manual', 'Download manually')}\n"
         
         else:
-            error = UnsupportedPlatformError(f"Unsupported operating system: {os_type}")
-            error.context["os_type"] = os_type
-            error.context["software"] = software
-            error.context["manual_option"] = software_data.get('manual', 'Check official website')
+            error = WorkspaceAIError(f"Unsupported operating system: {os_type}")
+            errorpass  # Simplified
+            errorpass  # Simplified
+            errorpass  # Simplified
             logging.error(f"Install command generation failed: {error}")
             raise error
         
@@ -731,11 +726,11 @@ def generate_install_commands_with_exceptions(software, method="auto"):
         
     except Exception as e:
         # Handle unexpected errors (but not our custom exceptions)
-        if isinstance(e, (WorkspaceAIError, UnsupportedPlatformError)):
+        if isinstance(e, (WorkspaceAIError, WorkspaceAIError)):
             raise  # Re-raise our custom exceptions
             
         converted_error = handle_exception("install_command_generation", e)
-        converted_error.context["software"] = software
-        converted_error.context["method"] = method
+        converted_errorpass  # Simplified
+        converted_errorpass  # Simplified
         logging.error(f"Install command generation failed: {converted_error}")
         raise converted_error

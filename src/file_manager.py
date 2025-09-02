@@ -17,9 +17,9 @@ from typing import List, Dict, Any, Union, Optional
 
 from .config import CONSTANTS, APP_CONFIG, get_workspace_path
 from .exceptions import (
-    FileSystemError, WorkspaceSecurityError, FileNotFoundError, 
-    FilePermissionError, FileAlreadyExistsError, ToolParameterError,
-    handle_exception, log_and_raise
+    WorkspaceAIError, 
+    ToolParameterError,
+    handle_exception
 )
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class FileManager:
             full_path.relative_to(base_path)
         except ValueError:
             logger.warning(f"Path traversal attempt blocked: {full_path}")
-            raise WorkspaceSecurityError(
+            raise WorkspaceAIError(
                 f"Path traversal attempt: {full_path}",
                 attempted_path=str(full_path)
             )
@@ -76,7 +76,7 @@ class FileManager:
         if not filename or not filename.strip():
             raise ToolParameterError(
                 "Filename validation failed: empty filename",
-                user_message="Filename cannot be empty"
+                # user_message="Filename cannot be empty"
             )
         
         # Check for invalid characters (platform-specific)
@@ -85,7 +85,7 @@ class FileManager:
             if any(char in filename for char in invalid_chars):
                 raise ToolParameterError(
                     f"Filename validation failed: invalid characters in '{filename}'",
-                    user_message=f"Filename contains invalid characters: {invalid_chars}"
+                    # user_message=f"Filename contains invalid characters: {invalid_chars}"
                 )
             
             # Check for reserved names on Windows
@@ -93,21 +93,21 @@ class FileManager:
             if filename.upper().split('.')[0] in reserved_names:
                 raise ToolParameterError(
                     f"Filename validation failed: reserved name '{filename}'",
-                    user_message=f"Filename '{filename}' is reserved and cannot be used on Windows"
+                    # user_message=f"Filename '{filename}' is reserved and cannot be used on Windows"
                 )
         else:
             # Linux/Unix - only null character is forbidden
             if '\0' in filename:
                 raise ToolParameterError(
                     "Filename validation failed: null character",
-                    user_message="Filename cannot contain null character"
+                    # user_message="Filename cannot contain null character"
                 )
         
         # Check length
         if len(filename) > CONSTANTS['MAX_FILENAME_LENGTH']:
             raise ToolParameterError(
                 f"Filename validation failed: too long ({len(filename)} chars)",
-                user_message=f"Filename too long (max {CONSTANTS['MAX_FILENAME_LENGTH']} characters)"
+                # user_message=f"Filename too long (max {CONSTANTS['MAX_FILENAME_LENGTH']} characters)"
             )
 
     def _guard_overwrite(self, path: str) -> Optional[str]:
@@ -164,15 +164,15 @@ class FileManager:
             else:
                 return f"File '{unique_name}' created successfully in workspace!"
             
-        except (WorkspaceSecurityError, ToolParameterError) as e:
+        except (WorkspaceAIError, ToolParameterError) as e:
             # Return user-friendly error messages for custom exceptions
             logger.error(f"Error creating file '{file_name}': {e}")
-            return f"Error: {e.user_message}"
+            return f"Error: {e}"
         except Exception as e:
             # Convert any other exception to appropriate custom exception
             converted_error = handle_exception("create_file", e)
             logger.error(f"Error creating file '{file_name}': {converted_error}")
-            return f"Error: {converted_error.user_message}"
+            return f"Error: {converted_error}"
 
     def read_file(self, file_name: str) -> str:
         """Read file contents from workspace"""
@@ -180,21 +180,21 @@ class FileManager:
             file_path = self._resolve(file_name)
             
             if not os.path.exists(file_path):
-                raise FileNotFoundError(
+                raise WorkspaceAIError(
                     f"File not found: {file_name}",
-                    file_path=file_name
+                    # file_path=file_name
                 )
             
             with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
                 return file.read()
                 
-        except (WorkspaceSecurityError, FileNotFoundError) as e:
+        except (WorkspaceAIError, WorkspaceAIError) as e:
             logger.error(f"Error reading file '{file_name}': {e}")
-            return f"Error: {e.user_message}"
+            return f"Error: {e}"
         except Exception as e:
             converted_error = handle_exception("read_file", e)
             logger.error(f"Error reading file '{file_name}': {converted_error}")
-            return f"Error: {converted_error.user_message}"
+            return f"Error: {converted_error}"
 
     def write_to_file(self, file_name: str, content: str) -> str:
         """Write content to file in workspace"""
@@ -219,13 +219,13 @@ class FileManager:
             else:
                 return f"Content written to '{file_name}' successfully in workspace!"
                 
-        except WorkspaceSecurityError as e:
+        except WorkspaceAIError as e:
             logger.error(f"Error writing to file '{file_name}': {e}")
-            return f"Error: {e.user_message}"
+            return f"Error: {e}"
         except Exception as e:
             converted_error = handle_exception("write_to_file", e)
             logger.error(f"Error writing to file '{file_name}': {converted_error}")
-            return f"Error: {converted_error.user_message}"
+            return f"Error: {converted_error}"
 
     def delete_file(self, file_name: str) -> str:
         """Delete a file from workspace"""
@@ -236,21 +236,21 @@ class FileManager:
             file_path = self._resolve(file_name)
             
             if not os.path.exists(file_path):
-                raise FileNotFoundError(
+                raise WorkspaceAIError(
                     f"File not found: {file_name}",
-                    file_path=file_name
+                    # file_path=file_name
                 )
             
             os.remove(file_path)
             return f"File '{file_name}' deleted successfully from workspace!"
             
-        except (WorkspaceSecurityError, FileNotFoundError) as e:
+        except (WorkspaceAIError, WorkspaceAIError) as e:
             logger.error(f"Error deleting file '{file_name}': {e}")
-            return f"Error: {e.user_message}"
+            return f"Error: {e}"
         except Exception as e:
             converted_error = handle_exception("delete_file", e)
             logger.error(f"Error deleting file '{file_name}': {converted_error}")
-            return f"Error: {converted_error.user_message}"
+            return f"Error: {converted_error}"
 
     def list_files(self, subdirectory: str = "") -> str:
         """List files in workspace directory or subdirectory"""
@@ -261,22 +261,22 @@ class FileManager:
                 directory_path = self.base_path
                 
             if not os.path.exists(directory_path):
-                raise FileNotFoundError(
+                raise WorkspaceAIError(
                     f"Directory not found: {subdirectory}",
-                    file_path=subdirectory
+                    # file_path=subdirectory
                 )
                 
             files = os.listdir(directory_path)
             location = f"workspace/{subdirectory}" if subdirectory else "workspace"
             return f"Files in {location}:\n" + "\n".join(files)
             
-        except (WorkspaceSecurityError, FileNotFoundError) as e:
+        except (WorkspaceAIError, WorkspaceAIError) as e:
             logger.error(f"Error listing files in '{subdirectory}': {e}")
-            return f"Error: {e.user_message}"
+            return f"Error: {e}"
         except Exception as e:
             converted_error = handle_exception("list_files", e)
             logger.error(f"Error listing files in '{subdirectory}': {converted_error}")
-            return f"Error: {converted_error.user_message}"
+            return f"Error: {converted_error}"
 
     # Additional methods... (continuing with all the other file operations)
     def create_folder(self, folder_name: str) -> str:

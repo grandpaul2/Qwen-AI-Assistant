@@ -4,7 +4,7 @@ Handles conversa            except json.JSONDecodeError as e:
                 # Use handle_exception for consistent error handling
                 error = handle_exception("load_memory", e)
                 logging.error(f"Memory corruption detected: {error}")
-                print(f"⚠️ Could not load memory: {error.user_message}")
+                print(f"⚠️ Could not load memory: {error}")
                 self.reset_memory()ory, summarization, and context building
 """
 
@@ -17,14 +17,11 @@ import logging
 from .config import CONSTANTS, get_memory_path
 from .exceptions import (
     handle_exception,
-    MemoryCorruptionError,
+    MemoryError,
     ConversationError,
-    FilePermissionError,
-    FileNotFoundError,
-    NetworkTimeoutError,
-    ServiceUnavailableError,
-    ResponseParsingError
+    WorkspaceAIError
 )
+
 
 class MemoryManager:
     """Manages conversation memory with rolling history"""
@@ -54,18 +51,18 @@ class MemoryManager:
                 # Use handle_exception for consistent error handling
                 error = handle_exception("load_memory", e) 
                 logging.error(f"Memory load failed: {error}")
-                print(f"⚠️ Could not load memory: {error.user_message}")
+                print(f"⚠️ Could not load memory: {error}")
                 self.reset_memory()
             except json.JSONDecodeError as e:
                 # Use handle_exception for consistent error handling
                 error = handle_exception("load_memory", e)
                 logging.error(f"Memory corruption detected: {error}")
-                print(f"⚠️ Could not load memory: {error.user_message}")
+                print(f"⚠️ Could not load memory: {error}")
                 self.reset_memory()
             except Exception as e:
                 converted_error = handle_exception("load_memory", e)
                 logging.error(f"Memory load failed: {converted_error}")
-                print(f"⚠️ Could not load memory: {converted_error.user_message}")
+                print(f"⚠️ Could not load memory: {converted_error}")
                 self.reset_memory()
         else:
             self.reset_memory()
@@ -101,7 +98,7 @@ class MemoryManager:
             # Use handle_exception for consistent error handling
             error = handle_exception("save_memory", e)
             logging.error(f"Memory save failed: {error}")
-            print(f"Warning: Could not save memory: {error.user_message}")
+            print(f"Warning: Could not save memory: {error}")
         except OSError as e:
             if e.errno == 28:  # No space left on device
                 # Use handle_exception for consistent error handling
@@ -109,11 +106,11 @@ class MemoryManager:
             else:
                 error = handle_exception("save_memory", e)
             logging.error(f"Memory save failed: {error}")
-            print(f"Warning: Could not save memory: {error.user_message}")
+            print(f"Warning: Could not save memory: {error}")
         except Exception as e:
             converted_error = handle_exception("save_memory", e)
             logging.error(f"Memory save failed: {converted_error}")
-            print(f"Warning: Could not save memory: {converted_error.user_message}")
+            print(f"Warning: Could not save memory: {converted_error}")
     
     def add_message(self, role, content, tool_calls=None):
         """Add message to current conversation - backward compatible wrapper"""
@@ -132,8 +129,8 @@ class MemoryManager:
             error = ConversationError(
                 f"Invalid message role: {role}. Must be one of {valid_roles}"
             )
-            error.context["role"] = role
-            error.context["valid_roles"] = valid_roles
+            pass  # Simplified
+            pass  # Simplified
             logging.error(f"Add message failed: {error}")
             raise error
         
@@ -142,7 +139,7 @@ class MemoryManager:
             error = ConversationError(
                 f"Message content must be a string, got {type(content)}"
             )
-            error.context["content_type"] = type(content).__name__
+            pass  # Simplified
             logging.error(f"Add message failed: {error}")
             raise error
         
@@ -223,10 +220,10 @@ class MemoryManager:
             if response.status_code == 200:
                 return response.json()["message"]["content"]
             elif response.status_code >= 500:
-                error = ServiceUnavailableError(
+                error = WorkspaceAIError(
                     f"Ollama service error during summarization: {response.status_code}"
                 )
-                error.context["status_code"] = response.status_code
+                pass  # Simplified
                 logging.warning(f"Summarization failed: {error}")
                 return f"Conversation from {messages[0]['timestamp'][:10]} with {len(messages)} messages"
             else:
@@ -234,21 +231,21 @@ class MemoryManager:
                 return f"Conversation from {messages[0]['timestamp'][:10]} with {len(messages)} messages"
         
         except requests.exceptions.Timeout as e:
-            error = NetworkTimeoutError(
+            error = WorkspaceAIError(
                 f"Summarization request timed out: {e}"
             )
             logging.warning(f"Summarization timeout: {error}")
             return f"Conversation from {messages[0]['timestamp'][:10]} with {len(messages)} messages"
         
         except requests.exceptions.ConnectionError as e:
-            error = NetworkTimeoutError(
+            error = WorkspaceAIError(
                 f"Cannot connect to summarization service: {e}"
             )
             logging.warning(f"Summarization connection failed: {error}")
             return f"Conversation from {messages[0]['timestamp'][:10]} with {len(messages)} messages"
         
         except json.JSONDecodeError as e:
-            error = ResponseParsingError(
+            error = WorkspaceAIError(
                 f"Invalid JSON response from summarization service: {e}"
             )
             logging.warning(f"Summarization response parsing failed: {error}")

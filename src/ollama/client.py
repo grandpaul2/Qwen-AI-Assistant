@@ -13,9 +13,9 @@ import threading
 
 from ..config import APP_CONFIG, CONSTANTS, load_config
 from ..exceptions import (
-    OllamaConnectionError, NetworkTimeoutError, ServiceUnavailableError,
-    ModelError, ResponseParsingError, handle_exception, log_and_raise,
-    ErrorRecovery
+    OllamaConnectionError, 
+    WorkspaceAIError, 
+    handle_exception
 )
 
 logger = logging.getLogger(__name__)
@@ -46,17 +46,17 @@ class OllamaClient:
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=5)
             if response.status_code != 200:
-                raise ServiceUnavailableError(
+                raise WorkspaceAIError(
                     f"Ollama server returned status {response.status_code}"
                 )
             
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
-                raise ResponseParsingError(
+                raise WorkspaceAIError(
                     f"Invalid JSON response from Ollama at {self.base_url}",
-                    response_content=response.text[:500] if hasattr(response, 'text') else "",
-                    original_error=e
+                    # response_content=response.text[:500] if hasattr(response, 'text') else "",
+                    # original_error=e
                 )
             
             models = data.get("models", [])
@@ -72,16 +72,16 @@ class OllamaClient:
         except requests.exceptions.ConnectionError as e:
             raise OllamaConnectionError(
                 f"Connection refused to Ollama at {self.base_url}",
-                host=self.base_url,
-                original_error=e
+                # host=self.base_url,
+                # original_error=e
             )
         except requests.exceptions.Timeout as e:
-            raise NetworkTimeoutError(
+            raise WorkspaceAIError(
                 f"Connection timeout to Ollama at {self.base_url}",
-                timeout_seconds=5.0,
-                original_error=e
+                # timeout_seconds=5.0,
+                # original_error=e
             )
-        except (ServiceUnavailableError, ResponseParsingError):
+        except (WorkspaceAIError, WorkspaceAIError):
             # Re-raise our custom exceptions
             raise
         except Exception as e:
@@ -134,7 +134,7 @@ class OllamaClient:
         """Make HTTP request to Ollama with retry logic"""
         try:
             return self._make_request_with_exceptions(endpoint, data, retry_count)
-        except (OllamaConnectionError, NetworkTimeoutError, ServiceUnavailableError):
+        except (OllamaConnectionError, WorkspaceAIError, WorkspaceAIError):
             # For backward compatibility, return None instead of raising
             return None
         except Exception:
@@ -158,10 +158,10 @@ class OllamaClient:
                 return self._make_request_with_exceptions(endpoint, data, retry_count + 1)
             else:
                 logger.error("Request failed after maximum retries due to timeout")
-                raise NetworkTimeoutError(
+                raise WorkspaceAIError(
                     f"Request to {url} timed out after {self.max_retries} retries",
-                    timeout_seconds=self.timeout,
-                    original_error=e
+                    # timeout_seconds=self.timeout,
+                    # original_error=e
                 )
                 
         except requests.exceptions.ConnectionError as e:
@@ -174,16 +174,16 @@ class OllamaClient:
                 logger.error("Request failed after maximum retries due to connection error")
                 raise OllamaConnectionError(
                     f"Connection to {url} failed after {self.max_retries} retries",
-                    host=self.base_url,
-                    original_error=e
+                    # host=self.base_url,
+                    # original_error=e
                 )
                 
         except requests.exceptions.HTTPError as e:
             status_code = e.response.status_code if e.response else 0
             if status_code >= 500:
-                raise ServiceUnavailableError(
+                raise WorkspaceAIError(
                     f"Ollama server error at {url}: HTTP {status_code}",
-                    original_error=e
+                    # original_error=e
                 )
             else:
                 logger.error(f"HTTP error: {e}")

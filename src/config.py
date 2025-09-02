@@ -10,10 +10,6 @@ from pathlib import Path
 from .exceptions import (
     WorkspaceAIError,
     ConfigurationError,
-    ConfigFileError,
-    ConfigValidationError,
-    FilePermissionError,
-    FileNotFoundError,
     handle_exception
 )
 
@@ -115,7 +111,7 @@ def _save_config_with_exceptions(config):
         raise error
     except (TypeError, ValueError) as e:
         # Handle JSON serialization errors
-        error = ConfigValidationError(
+        error = ConfigurationError(
             f"Cannot serialize config data: {e}"
         )
         error.context["config_type"] = type(config).__name__
@@ -151,7 +147,7 @@ def _load_config_with_exceptions():
             raise error
         except json.JSONDecodeError as e:
             # Handle corrupted config files
-            error = ConfigFileError(
+            error = ConfigurationError(
                 f"Config file is corrupted: {e}"
             )
             error.context["config_path"] = config_path
@@ -159,7 +155,7 @@ def _load_config_with_exceptions():
             raise error
         except KeyError as e:
             # Handle missing required config structure
-            error = ConfigValidationError(
+            error = ConfigurationError(
                 f"Config file missing required structure: {e}"
             )
             error.context["config_path"] = config_path

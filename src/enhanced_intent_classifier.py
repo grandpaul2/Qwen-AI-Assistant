@@ -7,7 +7,6 @@ import re
 import logging
 from typing import Tuple, Dict, Any, Optional, List
 
-from .intent_classifier import IntentClassifier
 from .context_manager import ConversationContext, get_conversation_context
 from .exceptions import (
     IntentError,
@@ -18,6 +17,55 @@ from .exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class IntentClassifier:
+    """Basic intent classifier - simplified for tool selection accuracy"""
+    
+    INTENT_PATTERNS = {
+        'CONTENT_CREATION': [
+            r'\b(write|create|make|generate|build)\s+.*\b(file|doc|content)',
+            r'\b(save|store|put).*\b(in|to|as)\s+.*\bfile\b',
+            r'\bcreate.*\.(txt|md|csv|json|py)\b'
+        ],
+        'CONTENT_CONTINUATION': [
+            r'\b(add|append|extend|continue)\s+.*\b(content|text|section)',
+            r'\b(update|modify|edit)\s+.*\b(file|document)',
+        ],
+        'SOFTWARE_INSTALLATION': [
+            r'\b(install|setup|configure)\s+\w+',
+            r'\binstallation\s+(steps|commands)',
+        ],
+        'FILE_MANAGEMENT': [
+            r'\b(read|open|view|list|search|find)\s+.*\bfile',
+            r'\b(copy|move|delete|backup)\s+.*\bfile',
+        ]
+    }
+    
+    def classify_with_confidence(self, user_input: str) -> Tuple[str, float]:
+        """Classify user input and return (intent, confidence_score)"""
+        if not user_input or not isinstance(user_input, str):
+            return 'UNCLEAR', 0.0
+            
+        scores = {}
+        input_lower = user_input.lower()
+        
+        for intent, patterns in self.INTENT_PATTERNS.items():
+            score = 0
+            for pattern in patterns:
+                try:
+                    if re.search(pattern, input_lower):
+                        score += 1
+                except re.error:
+                    continue
+            scores[intent] = score
+
+        if all(score == 0 for score in scores.values()):
+            return 'UNCLEAR', 0.0
+
+        best_intent = max(scores.keys(), key=lambda k: scores[k])
+        confidence = scores[best_intent] / max(sum(scores.values()), 1)
+        return best_intent, confidence
 
 
 class EnhancedIntentClassifier(IntentClassifier):
@@ -179,8 +227,6 @@ class EnhancedIntentClassifier(IntentClassifier):
         except Exception as e:
             # Handle unexpected errors
             converted_error = handle_exception("enhanced_intent_classification", e)
-            converted_error.context["input"] = user_input[:100] if user_input else None
-            converted_error.context["context_info"] = str(context_info)
             logging.error(f"Enhanced intent classification failed: {converted_error}")
             raise converted_error
     
