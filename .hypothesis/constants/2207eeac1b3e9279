@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\parameter_extractor.py
-# hypothesis_version: 6.138.11
-
-['Document', '["\\\']([^"\\\']+)["\\\']', '\\s+', '^[^\\w]+|[^\\w]+$', 'and', 'content', 'copy_file', 'create', 'create_file', 'delete_file', 'file', 'file_name', 'for', 'make', 'markdown', 'md', 'move_file', 'read_file', 'search_files', 'search_term', 'software', 'source_file', 'target_file', 'the', 'with', 'write_json_file', 'write_md_file', 'write_to_file', 'write_txt_file']

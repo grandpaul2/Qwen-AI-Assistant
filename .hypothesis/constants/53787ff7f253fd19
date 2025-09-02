@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\exceptions.py
-# hypothesis_version: 6.138.11
-
-[1.0, 100, 200, '...', 'File already exists', 'Operation timed out', 'Tool not found', 'Unsupported platform', 'attempted_path', 'context', 'error_code', 'error_type', 'file_path', 'function', 'host', 'invalid_params', 'limit', 'message', 'model_name', 'no such file', 'not found', 'operation', 'package_manager', 'permission', 'platform', 'possible_intents', 'response_content', 'software', 'timeout_seconds', 'token_count', 'tool_name', 'user_input', 'user_message']

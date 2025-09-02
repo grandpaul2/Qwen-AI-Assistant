@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\__init__.py
-# hypothesis_version: 6.138.11
-
-['FunctionValidator', 'OllamaClient', 'ParameterExtractor', 'ResponseFormatter', 'ToolExecutor', 'detect_file_intent']

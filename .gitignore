@@ -69,11 +69,20 @@ logs/
 # Test files
 test_*.py
 *_test.py
+debug_*.py
+interactive_test*
+chat_test*
+test_results/
+test_message*.txt
+*.bat
+*.ps1
 
 # Coverage reports
 .coverage
 coverage.xml
 htmlcov/
+.hypothesis/
+.pytest_cache/
 
 # WorkspaceAI runtime files
 WorkspaceAI/

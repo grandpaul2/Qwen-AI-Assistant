@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\ollama\legacy_interface.py
-# hypothesis_version: 6.138.11
-
-[0.3, 0.5, 0.8, 'CONTENT_CREATION', 'FILE_MANAGEMENT', 'HIGH_CONFIDENCE', 'LLM_FALLBACK', 'MEDIUM_CONFIDENCE', 'arguments', 'assistant', 'confidence_level', 'content', 'function', 'intent', 'intent_confidence', 'message', 'name', 'role', 'selected_tool', 'system', 'tool_calls', 'total_weight', 'user', 'verbose_output', 'word_breakdown']

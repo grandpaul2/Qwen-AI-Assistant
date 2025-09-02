@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\memory.py
-# hypothesis_version: 6.138.11
-
-[200, 500, '.backup', '.tmp', 'Empty conversation', 'SUMMARY_TIMEOUT', 'SYSTEM_PROMPT', 'assistant', 'content', 'content_type', 'current_conversation', 'date', 'last_updated', 'load_memory', 'memory.json', 'message', 'messages', 'model', 'qwen2.5:3b', 'r', 'recent_conversations', 'role', 'save_memory', 'status_code', 'stream', 'summary', 'system', 'timestamp', 'tool', 'tool_calls', 'user', 'utf-8', 'valid_roles', 'w']

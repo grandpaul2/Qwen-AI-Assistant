@@ -12,6 +12,7 @@ import os
 import json
 import shutil
 import requests
+import threading
 from datetime import datetime
 import logging
 from .config import CONSTANTS, get_memory_path
@@ -112,6 +113,18 @@ class MemoryManager:
             logging.error(f"Memory save failed: {converted_error}")
             print(f"Warning: Could not save memory: {converted_error}")
     
+    def save_memory_async(self):
+        """Save memory asynchronously in background thread"""
+        def _async_save():
+            try:
+                self.save_memory()
+            except Exception as e:
+                # Log error but don't block the main thread
+                logging.error(f"Async memory save failed: {e}")
+        
+        # Start save in background thread
+        threading.Thread(target=_async_save, daemon=True).start()
+    
     def add_message(self, role, content, tool_calls=None):
         """Add message to current conversation - backward compatible wrapper"""
         try:
@@ -152,9 +165,6 @@ class MemoryManager:
             message['tool_calls'] = tool_calls
         
         self.current_conversation.append(message)
-        
-        # Auto-save after each message (synchronous for reliability)
-        self.save_memory()
         
         # Import logger here to avoid circular imports
         logger = logging.getLogger(__name__)
@@ -298,6 +308,8 @@ class MemoryManager:
         self.current_conversation = []
         self.recent_conversations = []
         self.summarized_conversations = []
+        # Create the memory folder structure on first run
+        self.save_memory()
 
 
 # Global memory manager instance

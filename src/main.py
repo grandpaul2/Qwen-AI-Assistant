@@ -9,10 +9,11 @@ import os
 import platform
 import logging
 
-from .config import APP_CONFIG, setup_logging, save_config, get_config_path
+from .config import APP_CONFIG, setup_logging, save_config, get_config_path, update_logging_level
 from .memory import memory
 from .file_manager import file_manager
-from .ollama.enhanced_interface import call_ollama_with_tools, detect_file_intent, test_ollama_connection
+from .ollama.universal_interface import call_ollama_with_tools
+from .ollama.enhanced_interface import test_ollama_connection
 from .utils import detect_linux_package_manager, generate_install_commands
 from .exceptions import (
     WorkspaceAIError, ConfigurationError, OllamaConnectionError,
@@ -150,6 +151,8 @@ def configure_settings_with_exceptions():
                     config['verbose_output'] = not config.get('verbose_output', False)
                     print(f"Verbose output: {'ON' if config['verbose_output'] else 'OFF'}")
                     logging.info(f"Verbose output toggled to: {config['verbose_output']}")
+                    # Update logging level immediately
+                    update_logging_level(config['verbose_output'])
                 except Exception as e:
                     converted_error = handle_exception("verbose_toggle", e)
                     logging.error(f"Verbose toggle failed: {converted_error}")
@@ -246,10 +249,9 @@ def interactive_mode_with_exceptions():
         if memory.recent_conversations or memory.summarized_conversations:
             print("Continuing from previous conversations...")
 
-        print("\n- 'chat: question...' - force chat without using tools")
-        print("- 'tools: command...' - force file management tools")
-        print("- 'install: software...' - get installation commands")
+        print("")
 
+        print("t: to use tools")
         print("\n- /new        Start new conversation")
         print("- /tools      List available tools")
         print("- /memory     Show memory status")
@@ -258,6 +260,7 @@ def interactive_mode_with_exceptions():
         print("- exit        Quit")
         print("="*70)
         print("Ready for your input...")
+        print()  # Extra line of space
 
     except Exception as e:
         converted_error = handle_exception("interactive_mode_setup", e)
@@ -273,9 +276,9 @@ def interactive_mode_with_exceptions():
             # Reset error count on successful iteration
             error_count = 0
             
-            # Get user input with timeout protection
+            # Get user input 
             try:
-                prompt = input(f"\nYou: ").strip()
+                prompt = input('> ').strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nSaving memory and exiting...")
                 logger.info("User interrupted with Ctrl+C or EOF")
@@ -341,7 +344,7 @@ def interactive_mode_with_exceptions():
                     print("- write .json...")
                     print("- write .txt...")
                     print("- write .md...")
-                    print("\nUse 'tools: <command>' to force the use of that tool")
+                    print("\nUse 't: <command>' to use file management tools")
                 except Exception as e:
                     converted_error = handle_exception("tools_display", e)
                     logging.error(f"Tools display failed: {converted_error}")
@@ -396,41 +399,29 @@ def interactive_mode_with_exceptions():
                 else:
                     print("Please provide a question after 'chat:'")
                     
-            elif prompt.lower().startswith('tools:'):
-                actual_prompt = prompt[6:].strip()
+            elif prompt.lower().startswith('t:'):
+                actual_prompt = prompt[2:].strip()
                 if actual_prompt:
                     try:
                         call_ollama_with_tools(actual_prompt, use_tools=True)
+                        print()  # Add blank line after bot response
                     except Exception as e:
                         converted_error = handle_exception("tools_mode", e)
                         logging.error(f"Tools mode failed: {converted_error}")
                         print(f"Error in tools mode: {str(e)}")
                 else:
-                    print("Please provide a command after 'tools:'")
-                    
-            elif prompt.lower().startswith('install:'):
-                software = prompt[8:].strip()
-                if software:
-                    try:
-                        print(generate_install_commands(software))
-                    except Exception as e:
-                        converted_error = handle_exception("install_commands", e)
-                        logging.error(f"Install commands failed: {converted_error}")
-                        print(f"Error generating install commands: {str(e)}")
-                else:
-                    print("Please specify software to install after 'install:'")
+                    print("Please provide a command after 't:'")
                     
             else:
-                # Enhanced tool detection with logging and error handling
+                # Default behavior: chat mode only (no tools unless explicitly requested)
                 try:
-                    looks_like_file_task = detect_file_intent(prompt)
-                    logger.info(f"Tool detection: '{prompt[:50]}...' -> use_tools={looks_like_file_task}")
-                    call_ollama_with_tools(prompt, use_tools=looks_like_file_task)
+                    call_ollama_with_tools(prompt, use_tools=False)
+                    print()  # Add blank line after bot response
                 except Exception as e:
-                    converted_error = handle_exception("tool_detection_or_execution", e)
-                    logging.error(f"Tool detection or execution failed: {converted_error}")
-                    print(f"Error processing request: {str(e)}")
-                    print("You can try rephrasing your request or use specific commands like 'chat:' or 'tools:'")
+                    converted_error = handle_exception("chat_mode", e)
+                    logging.error(f"Chat mode failed: {converted_error}")
+                    print(f"Error in chat mode: {str(e)}")
+                    print("You can try rephrasing your request or use specific commands like 'chat:' or 't:'")
                 
         except Exception as e:
             error_count += 1
@@ -539,3 +530,11 @@ def main_with_exceptions():
         converted_error = handle_exception("main_application", e)
         logging.critical(f"Main application failed: {converted_error}")
         raise converted_error
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"WorkspaceAI encountered an error: {e}")
+        exit(1)

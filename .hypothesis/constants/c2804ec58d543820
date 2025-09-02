@@ -1,4 +1,0 @@
-# file: C:\Users\Grandpaul\Desktop\AI Work\WorkspaceAI_project\src\config.py
-# hypothesis_version: 6.138.11
-
-[255, 1024, '\x1b[0m', '\x1b[1m', '\x1b[91m', '\x1b[92m', '\x1b[93m', '\x1b[94m', '\x1b[95m', '\x1b[96m', '3.0', 'API_MAX_RETRIES', 'API_TIMEOUT', 'BASE_URL', 'CONFIG_FILE', 'LOG_FILE', 'MAX_FILENAME_LENGTH', 'MEMORY_LOCATION', 'MODEL', 'PROGRESS_DURATION', 'RECENT_CONVERSATIONS', 'SEARCH_MAX_FILE_KB', 'SUMMARY_TIMEOUT', 'SYSTEM_PROMPT', 'VERSION', 'WORKSPACE_LOCATION', 'WorkspaceAI/memory', 'config_path', 'config_type', 'load_config', 'localhost:11434', 'model', 'ollama_host', 'qwen2.5:3b', 'r', 'safe_mode', 'save_config', 'search_max_file_kb', 'settings', 'setup_logging', 'utf-8', 'verbose_output', 'version', 'w']

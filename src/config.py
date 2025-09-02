@@ -17,15 +17,9 @@ from .exceptions import (
 # Version
 VERSION = "3.0"
 
-# ANSI color codes
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RED = "\033[91m"
-BLUE = "\033[94m"
-CYAN = "\033[96m"
-MAGENTA = "\033[95m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
+# ANSI Color codes for terminal output
+CYAN = '\033[96m'
+RESET = '\033[0m'
 
 # Application constants
 CONSTANTS = {
@@ -179,10 +173,17 @@ def setup_logging():
 def _setup_logging_with_exceptions():
     """Setup logging configuration - raises exceptions for validation errors"""
     try:
+        # Load config to check verbose setting
+        config = load_config()
+        verbose_output = config.get('verbose_output', False)
+        
+        # Set log level based on verbose setting
+        log_level = logging.INFO if verbose_output else logging.WARNING
+        
         os.makedirs(os.path.dirname(get_log_path()), exist_ok=True)
         
         logging.basicConfig(
-            level=logging.INFO,
+            level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler(get_log_path(), encoding='utf-8'),
@@ -190,7 +191,7 @@ def _setup_logging_with_exceptions():
             ]
         )
         logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(log_level)
         return logger
     except PermissionError as e:
         # Use handle_exception for consistent error handling
@@ -203,3 +204,11 @@ def _setup_logging_with_exceptions():
     except Exception as e:
         converted_error = handle_exception("setup_logging", e)
         raise converted_error
+
+def update_logging_level(verbose_output: bool):
+    """Update logging level based on verbose setting"""
+    log_level = logging.INFO if verbose_output else logging.WARNING
+    logging.getLogger().setLevel(log_level)
+    # Also update all handlers
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(log_level)

@@ -17,6 +17,7 @@ from ..exceptions import (
     WorkspaceAIError, 
     handle_exception
 )
+from ..progress import show_progress
 
 logger = logging.getLogger(__name__)
 
@@ -206,8 +207,10 @@ class OllamaClient:
             
             if tools:
                 data["tools"] = tools
-                
-            response = self.make_request("/api/chat", data)
+            
+            # Show progress indicator while waiting for response
+            with show_progress("", animated=True):
+                response = self.make_request("/api/chat", data)
             
             if response and response.status_code == 200:
                 try:

@@ -12,7 +12,7 @@ from .client import OllamaClient, get_default_client
 from .tool_executor import ToolExecutor, get_default_executor
 from .response_formatter import ResponseFormatter
 from .legacy_interface import _execute_tool_call
-from ..config import load_config
+from ..config import APP_CONFIG, CYAN, RESET, load_config
 from ..memory import memory
 from ..context_manager import ConversationContext
 from ..enhanced_intent_classifier import EnhancedIntentClassifier
@@ -86,7 +86,12 @@ def call_ollama_with_enhanced_intelligence(
             
             # Just show the response directly - no conversational enhancement needed
             if response and response.get("success"):
-                print(f"\n{response.get('result', '')}")
+                result_text = response.get('result', '')
+                print(f"\n{CYAN}{result_text}{RESET}")
+                # Save assistant response to memory
+                memory.add_message("assistant", result_text)
+                # Save memory asynchronously after printing
+                memory.save_memory_async()
             
             return
         
@@ -304,6 +309,8 @@ def _try_direct_execution(
             if result:
                 print(f"\n{result}")
                 memory.add_message("assistant", result)
+                # Save memory asynchronously after printing
+                memory.save_memory_async()
                 return {"success": True, "result": result, "execution_type": "direct"}
             else:
                 return {"success": False, "error": "Direct execution failed"}
@@ -350,6 +357,8 @@ def _execute_multi_step_operation(
             combined_result = "\n".join(results)
             print(f"\n{combined_result}")
             memory.add_message("assistant", combined_result)
+            # Save memory asynchronously after printing
+            memory.save_memory_async()
             return {"success": True, "result": combined_result, "execution_type": "multi_step", "steps_completed": len(results)}
         else:
             return {"success": False, "error": "Multi-step execution failed"}
@@ -405,6 +414,8 @@ def _call_ollama_with_enhanced_guidance(
             if content:
                 print(f"\n{content}")
                 memory.add_message("assistant", content, tool_calls)
+                # Save memory asynchronously after printing
+                memory.save_memory_async()
             
             return {"success": True, "result": content, "tool_calls": tool_calls, "execution_type": "llm_guided"}
         else:
@@ -501,8 +512,10 @@ def _enhanced_simple_chat(prompt: str, model: Optional[str], context: Conversati
         
         response = client.simple_chat(prompt)
         if response:
-            print(f"\n{response}")
+            print(f"\n{CYAN}{response}{RESET}")
             memory.add_message("assistant", response)
+            # Save memory asynchronously after printing
+            memory.save_memory_async()
             return {"success": True, "result": response}
         else:
             print("❌ No response received from Ollama")
