@@ -66,14 +66,16 @@ tmp/
 *.log
 logs/
 
-# Test files
-test_*.py
-*_test.py
+# Temporary test files (but allow legitimate test suite)
 debug_*.py
 interactive_test*
 chat_test*
 test_results/
 test_message*.txt
+
+# Exclude only specific legacy test files if needed
+# test_*.py  # REMOVED - this was catching our entire test suite!
+# *_test.py  # REMOVED - this was catching our entire test suite!
 *.bat
 *.ps1
 
