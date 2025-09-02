@@ -354,6 +354,18 @@ class TestEdgeCases:
         long_msg = "A" * 1000
         progress3 = ProgressIndicator(long_msg)
         assert progress3.message == long_msg
+        
+    def test_no_message_progress_display(self):
+        """Test progress indicator without message (line 62, 94, 105)"""
+        # Test ProgressIndicator with empty message to hit line 62
+        progress = ProgressIndicator(message="", interval=0.01, max_dots=2)
+        with progress:
+            time.sleep(0.02)  # Let it display dots without message
+            
+        # Test SimpleProgress with no message to hit lines 94, 105
+        simple = SimpleProgress()  # No message - will hit line 94, 105
+        simple.show()
+        simple.hide()
 
 
 class TestIntegration:

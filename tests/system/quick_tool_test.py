@@ -18,7 +18,7 @@ def quick_test():
     
     # Import the function
     try:
-        from src.ollama.enhanced_interface import detect_file_intent
+        from src.app import detect_file_intent
         print("✅ Bot system loaded")
     except Exception as e:
         print(f"❌ Failed to load bot system: {e}")

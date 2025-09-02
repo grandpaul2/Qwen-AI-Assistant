@@ -19,8 +19,34 @@ from src.utils import detect_linux_package_manager, generate_install_commands
 from src.exceptions import WorkspaceAIError, UnsupportedPlatformError
 
 
+class TestWrapperExceptionHandling:
+    """Test exception handling in wrapper functions"""
+    
+    @patch('src.software_installer.generate_install_commands_with_exceptions')
+    def test_generate_install_commands_wrapper_exception(self, mock_generate):
+        """Test wrapper function handles exceptions from main function"""
+        from src.software_installer import generate_install_commands
+        
+        # Make the main function raise an exception
+        mock_generate.side_effect = Exception("Test error")
+        
+        result = generate_install_commands("python", "auto")
+        
+        assert "Error generating install commands for 'python'" in result
+        assert "Please check manually" in result
+
+
 class TestGenerateInstallCommands:
     """Test install command generation functionality"""
+    
+    def test_method_none_defaults_to_auto(self):
+        """Test that method=None defaults to auto"""
+        with patch('platform.system', return_value='Windows'):
+            result = generate_install_commands_with_exceptions("python", None)
+            
+            assert isinstance(result, str)
+            assert "python" in result.lower()
+            assert "Windows" in result
     
     def test_python_windows_auto(self):
         """Test Python installation commands for Windows with auto method"""

@@ -20,11 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from src.config import APP_CONFIG
 from src.file_manager import FileManager
 from src.memory import MemoryManager
-from src.ollama.client import OllamaClient
-from src.ollama.tool_executor import ToolExecutor
-from src.ollama.parameter_extractor import ParameterExtractor
-from src.ollama.function_validator import FunctionValidator
-from src.ollama.response_formatter import ResponseFormatter
+from src.ollama_client import OllamaClient
 
 
 @pytest.fixture(scope="session")
@@ -149,53 +145,6 @@ def mock_ollama_client() -> Mock:
         }
     }
     return mock_client
-
-
-@pytest.fixture
-def tool_executor_instance(mock_ollama_client: Mock) -> ToolExecutor:
-    """
-    Create a ToolExecutor instance with mock client
-    
-    Args:
-        mock_ollama_client: Mock Ollama client
-        
-    Returns:
-        ToolExecutor instance for testing
-    """
-    return ToolExecutor(mock_ollama_client)
-
-
-@pytest.fixture
-def parameter_extractor_instance() -> ParameterExtractor:
-    """
-    Create a ParameterExtractor instance
-    
-    Returns:
-        ParameterExtractor instance for testing
-    """
-    return ParameterExtractor()
-
-
-@pytest.fixture
-def function_validator_instance() -> FunctionValidator:
-    """
-    Create a FunctionValidator instance
-    
-    Returns:
-        FunctionValidator instance for testing
-    """
-    return FunctionValidator()
-
-
-@pytest.fixture
-def response_formatter_instance() -> ResponseFormatter:
-    """
-    Create a ResponseFormatter instance
-    
-    Returns:
-        ResponseFormatter instance for testing
-    """
-    return ResponseFormatter()
 
 
 @pytest.fixture

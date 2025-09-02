@@ -503,5 +503,87 @@ class TestOllamaClientEdgeCases(unittest.TestCase):
         self.assertIsInstance(str_repr, str)
 
 
+class TestOllamaClientVerifyConnection(unittest.TestCase):
+    """Test coverage for verify_connection method exception handling"""
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.config = {
+            'model': 'test-model',
+            'ollama_host': 'localhost:11434'
+        }
+        self.client = OllamaClient(self.config)
+
+    @patch('src.ollama_client.requests.get')
+    def test_verify_connection_timeout_exception(self, mock_get):
+        """Test verify_connection with timeout exception"""
+        from src.exceptions import WorkspaceAIError
+        
+        mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
+        
+        with self.assertRaises(WorkspaceAIError) as context:
+            self.client.verify_connection()
+        
+        self.assertIn("Connection timeout to Ollama", str(context.exception))
+        self.assertIn("localhost:11434", str(context.exception))
+
+    @patch('src.ollama_client.requests.get')
+    def test_verify_connection_connection_error(self, mock_get):
+        """Test verify_connection with connection error"""
+        from src.exceptions import OllamaConnectionError
+        
+        mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+        
+        with self.assertRaises(OllamaConnectionError) as context:
+            self.client.verify_connection()
+        
+        self.assertIn("Connection refused to Ollama", str(context.exception))
+        self.assertIn("localhost:11434", str(context.exception))
+
+    @patch('src.ollama_client.requests.get')
+    def test_verify_connection_json_decode_error(self, mock_get):
+        """Test verify_connection with JSON decode error"""
+        from src.exceptions import WorkspaceAIError
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "doc", 0)
+        mock_get.return_value = mock_response
+        
+        with self.assertRaises(WorkspaceAIError) as context:
+            self.client.verify_connection()
+        
+        self.assertIn("Invalid JSON response from Ollama", str(context.exception))
+
+    @patch('src.ollama_client.requests.get')  
+    def test_verify_connection_non_200_status(self, mock_get):
+        """Test verify_connection with non-200 status code"""
+        from src.exceptions import WorkspaceAIError
+        
+        mock_response = Mock()
+        mock_response.status_code = 500
+        mock_get.return_value = mock_response
+        
+        with self.assertRaises(WorkspaceAIError) as context:
+            self.client.verify_connection()
+        
+        self.assertIn("Ollama server returned status 500", str(context.exception))
+
+    @patch('src.ollama_client.handle_exception')
+    @patch('src.ollama_client.requests.get')
+    def test_verify_connection_generic_exception(self, mock_get, mock_handle_exception):
+        """Test verify_connection with generic exception"""
+        from src.exceptions import WorkspaceAIError
+        
+        mock_get.side_effect = ValueError("Unexpected error")
+        mock_handle_exception.return_value = WorkspaceAIError("Converted error")
+        
+        with self.assertRaises(WorkspaceAIError) as context:
+            self.client.verify_connection()
+        
+        mock_handle_exception.assert_called_once_with("verify_connection", mock_get.side_effect)
+        self.assertEqual(str(context.exception), "Converted error")
+
+
 if __name__ == '__main__':
     unittest.main()

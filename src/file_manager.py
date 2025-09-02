@@ -30,8 +30,8 @@ class FileManager:
     def __init__(self, config=None):
         if config is None:
             config = APP_CONFIG
-        
-        self.base_path = get_workspace_path()
+        # Allow override of workspace path via config for testing
+        self.base_path = config.get('workspace_path', get_workspace_path())
         self.safe_mode = config.get("safe_mode", True)
         self.default_compress_format = config.get("compress_format", "zip")
         self.search_case_sensitive = config.get("search_case_sensitive", False)
@@ -160,7 +160,8 @@ class FileManager:
             logger.info(f"Created file: {file_path}")
             
             if unique_name != file_name:
-                return f"File created as '{unique_name}' (original name already existed) in workspace!"
+                # Indicate successful creation even when renamed
+                return f"File created successfully as '{unique_name}' (original name already existed) in workspace!"
             else:
                 return f"File '{unique_name}' created successfully in workspace!"
             
@@ -176,19 +177,23 @@ class FileManager:
 
     def read_file(self, file_name: str) -> str:
         """Read file contents from workspace"""
+        # Resolve and validate path; raise ValueError for traversal
         try:
             file_path = self._resolve(file_name)
-            
+        except WorkspaceAIError as e:
+            logger.error(f"Path traversal blocked in read_file: {e}")
+            # Propagate as ValueError with explicit outside workspace message
+            raise ValueError(f"outside the workspace: {file_name}")
+        # Proceed to read file
+        try:
             if not os.path.exists(file_path):
                 raise WorkspaceAIError(
-                    f"File not found: {file_name}",
-                    # file_path=file_name
+                    f"File not found: {file_name}"
                 )
-            
             with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
                 return file.read()
-                
-        except (WorkspaceAIError, WorkspaceAIError) as e:
+        except WorkspaceAIError as e:
+            # Handle not found or other workspace errors
             logger.error(f"Error reading file '{file_name}': {e}")
             return f"Error: {e}"
         except Exception as e:
@@ -301,8 +306,13 @@ class FileManager:
 
     def copy_file(self, src_file: str, dest_file: str) -> str:
         """Copy a file within workspace"""
-        src_file_path = self._resolve(src_file)
-        dest_file_path = self._resolve(dest_file)
+        # Resolve paths and guard against path traversal
+        try:
+            src_file_path = self._resolve(src_file)
+            dest_file_path = self._resolve(dest_file)
+        except WorkspaceAIError as e:
+            logger.error(f"Path traversal blocked in copy_file: {e}")
+            raise ValueError(f"outside the workspace: {dest_file}")
         guard_result = self._guard_overwrite(dest_file_path)
         if guard_result:
             return guard_result

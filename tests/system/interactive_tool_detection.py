@@ -42,8 +42,9 @@ class InteractiveToolDetectionTester:
         print()
         
         try:
-            # Import the enhanced system
-            from src.ollama.enhanced_interface import call_ollama_with_enhanced_intelligence, detect_file_intent
+            # Import the core system functions
+            from src.app import detect_file_intent
+            from src.enhanced_interface import call_ollama_with_enhanced_intelligence
             print("✅ Bot system loaded successfully")
             print()
         except Exception as e:
@@ -113,7 +114,7 @@ class InteractiveToolDetectionTester:
             print(f"    Expected: {expected} ({description})")
             
             # Test with detect_file_intent
-            from src.ollama.enhanced_interface import detect_file_intent
+            from src.enhanced_interface import detect_file_intent
             detected = "tools" if detect_file_intent(input_text) else "chat"
             
             status = "✅" if detected == expected else "❌"
@@ -150,14 +151,14 @@ class InteractiveToolDetectionTester:
             ("Show me the metadata of image.png", "get_file_metadata", "Metadata retrieval")
         ]
         
-        print("Testing tool selection...")
-        for i, (input_text, expected_tool, description) in enumerate(tool_cases, 1):
+    print("Testing tool selection...")
+    for i, (input_text, expected_tool, description) in enumerate(tool_cases, 1):
             print(f"\n[{i}] Input: '{input_text}'")
             print(f"    Expected tool: {expected_tool} ({description})")
             
             # Test with enhanced system
             try:
-                from src.ollama.enhanced_interface import get_enhanced_components, detect_file_intent
+                from src.enhanced_interface import get_enhanced_components, detect_file_intent
                 
                 # Simple test - just check if it detects as tool request
                 is_tool_request = detect_file_intent(input_text)
@@ -322,7 +323,7 @@ class InteractiveToolDetectionTester:
         total = len(validation_set)
         
         for i, (input_text, expected, description) in enumerate(validation_set, 1):
-            from src.ollama.enhanced_interface import detect_file_intent
+                from src.enhanced_interface import detect_file_intent
             detected = "tools" if detect_file_intent(input_text) else "chat"
             is_correct = detected == expected
             correct += is_correct

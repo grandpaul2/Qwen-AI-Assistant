@@ -34,7 +34,7 @@ class AutomatedBotTester:
         
         # Import the enhanced system
         try:
-            from src.ollama.enhanced_interface import (
+            from src.enhanced_interface import (
                 get_enhanced_components,
                 enhanced_context_aware_pipeline,
                 get_conversation_stats,
@@ -139,7 +139,7 @@ class AutomatedBotTester:
         # Test enhanced pipeline (if available)
         try:
             # Try to import and use enhanced pipeline
-            from src.ollama.enhanced_interface import enhanced_context_aware_pipeline
+            from src.enhanced_interface import enhanced_context_aware_pipeline
             pipeline_result, debug_info = enhanced_context_aware_pipeline(
                 user_input, context, intent_classifier, tool_selector, verbose_output=False
             )

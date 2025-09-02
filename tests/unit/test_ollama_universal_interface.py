@@ -20,9 +20,9 @@ class TestCallOllamaWithUniversalTools:
     """Test the main universal tool calling function"""
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface._simple_chat_without_tools')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface._simple_chat_without_tools')
     def test_basic_call_without_tools(self, mock_simple_chat, mock_memory, mock_load_config, mock_print):
         """Test basic call without tools enabled"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -37,10 +37,10 @@ class TestCallOllamaWithUniversalTools:
         mock_print.assert_called()  # Response should be printed
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface._call_ollama_with_open_tools')
-    @patch('src.ollama.universal_interface.handle_any_tool_call')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface._call_ollama_with_open_tools')
+    @patch('src.ollama_universal_interface.handle_any_tool_call')
     def test_call_with_tools_enabled(self, mock_handle_tool, mock_open_tools, mock_memory, mock_load_config, mock_print):
         """Test call with tools enabled"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -66,9 +66,9 @@ class TestCallOllamaWithUniversalTools:
         mock_open_tools.assert_called_once()
         mock_handle_tool.assert_called_once()
     
-    @patch('src.ollama.universal_interface.logger')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
+    @patch('src.ollama_universal_interface.logger')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
     def test_exception_handling(self, mock_memory, mock_load_config, mock_logger):
         """Test exception handling in main function"""
         mock_load_config.side_effect = Exception("Config error")
@@ -82,7 +82,7 @@ class TestCallOllamaWithUniversalTools:
 class TestSimpleChatWithoutTools:
     """Test simple chat functionality without tools"""
     
-    @patch('src.ollama.universal_interface.OllamaClient')
+    @patch('src.ollama_client.OllamaClient')
     def test_successful_chat(self, mock_ollama_client):
         """Test successful simple chat"""
         mock_client = MagicMock()
@@ -96,7 +96,7 @@ class TestSimpleChatWithoutTools:
         assert result == "Response text"
         mock_client.chat_completion.assert_called_once()
     
-    @patch('src.ollama.universal_interface.OllamaClient')
+    @patch('src.ollama_client.OllamaClient')
     def test_no_response(self, mock_ollama_client):
         """Test handling of no response"""
         mock_client = MagicMock()
@@ -106,9 +106,9 @@ class TestSimpleChatWithoutTools:
         result = _simple_chat_without_tools("test", None, False)
         
         assert result is None
-    
-    @patch('src.ollama.universal_interface.logger')
-    @patch('src.ollama.universal_interface.OllamaClient')
+
+    @patch('src.ollama_universal_interface.logger')
+    @patch('src.ollama_client.OllamaClient')
     def test_exception_handling(self, mock_ollama_client, mock_logger):
         """Test exception handling in simple chat"""
         mock_client = MagicMock()
@@ -119,8 +119,8 @@ class TestSimpleChatWithoutTools:
         
         assert result is None
         mock_logger.error.assert_called_once()
-    
-    @patch('src.ollama.universal_interface.OllamaClient')
+
+    @patch('src.ollama_client.OllamaClient')
     def test_model_override(self, mock_ollama_client):
         """Test model override functionality"""
         mock_client = MagicMock()
@@ -137,10 +137,10 @@ class TestSimpleChatWithoutTools:
 class TestCallOllamaWithOpenTools:
     """Test open tools functionality"""
     
-    @patch('src.ollama.universal_interface.OllamaClient')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface.get_context_aware_tool_schemas')
-    @patch('src.ollama.universal_interface.build_context_aware_instruction')
+    @patch('src.ollama_client.OllamaClient')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface.get_context_aware_tool_schemas')
+    @patch('src.ollama_universal_interface.build_context_aware_instruction')
     def test_successful_tool_call(self, mock_instruction, mock_schemas, mock_memory, mock_ollama_client):
         """Test successful tool call"""
         mock_instruction.return_value = "Enhanced instruction"
@@ -161,10 +161,10 @@ class TestCallOllamaWithOpenTools:
         assert result is not None
         mock_client.chat_completion.assert_called_once()
     
-    @patch('src.ollama.universal_interface.OllamaClient')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface.get_context_aware_tool_schemas')
-    @patch('src.ollama.universal_interface.build_context_aware_instruction')
+    @patch('src.ollama_client.OllamaClient')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface.get_context_aware_tool_schemas')
+    @patch('src.ollama_universal_interface.build_context_aware_instruction')
     def test_no_tool_calls_in_response(self, mock_instruction, mock_schemas, mock_memory, mock_ollama_client):
         """Test response without tool calls"""
         mock_instruction.return_value = "Tool instruction"
@@ -182,8 +182,8 @@ class TestCallOllamaWithOpenTools:
         assert result is not None
         assert result["message"]["content"] == "Simple response"
     
-    @patch('src.ollama.universal_interface.logger')
-    @patch('src.ollama.universal_interface.OllamaClient')
+    @patch('src.ollama_universal_interface.logger')
+    @patch('src.ollama_client.OllamaClient')
     def test_exception_handling(self, mock_ollama_client, mock_logger):
         """Test exception handling in open tools"""
         mock_client = MagicMock()
@@ -281,8 +281,8 @@ class TestGetOpenToolSchemas:
 class TestCallOllamaWithTools:
     """Test backward compatibility wrapper"""
     
-    @patch('src.ollama.universal_interface.call_ollama_with_universal_tools')
-    @patch('src.ollama.universal_interface.load_config')
+    @patch('src.ollama_universal_interface.call_ollama_with_universal_tools')
+    @patch('src.ollama_universal_interface.load_config')
     def test_backward_compatibility_call(self, mock_load_config, mock_universal_call):
         """Test backward compatibility wrapper"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -291,8 +291,8 @@ class TestCallOllamaWithTools:
         
         mock_universal_call.assert_called_once_with("test prompt", "model", True, False)
     
-    @patch('src.ollama.universal_interface.call_ollama_with_universal_tools')
-    @patch('src.ollama.universal_interface.load_config')
+    @patch('src.ollama_universal_interface.call_ollama_with_universal_tools')
+    @patch('src.ollama_universal_interface.load_config')
     def test_default_parameters(self, mock_load_config, mock_universal_call):
         """Test default parameter handling"""
         mock_load_config.return_value = {'verbose_output': True}
@@ -306,9 +306,9 @@ class TestIntegration:
     """Integration tests for complete workflow"""
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface.OllamaClient')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_client.OllamaClient')
     def test_full_integration_without_tools(self, mock_ollama_client, mock_memory, mock_load_config, mock_print):
         """Test full integration without tools"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -326,12 +326,12 @@ class TestIntegration:
         mock_print.assert_called()
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory') 
-    @patch('src.ollama.universal_interface.OllamaClient')
-    @patch('src.ollama.universal_interface.handle_any_tool_call')
-    @patch('src.ollama.universal_interface.get_context_aware_tool_schemas')
-    @patch('src.ollama.universal_interface.build_context_aware_instruction')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory') 
+    @patch('src.ollama_client.OllamaClient')
+    @patch('src.ollama_universal_interface.handle_any_tool_call')
+    @patch('src.ollama_universal_interface.get_context_aware_tool_schemas')
+    @patch('src.ollama_universal_interface.build_context_aware_instruction')
     def test_tool_call_integration(self, mock_instruction, mock_schemas, mock_handle_tool, 
                                  mock_ollama_client, mock_memory, mock_load_config, mock_print):
         """Test tool call integration"""
@@ -368,10 +368,10 @@ class TestErrorHandling:
     """Test error handling scenarios"""
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.logger')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface._call_ollama_with_open_tools')
+    @patch('src.ollama_universal_interface.logger')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface._call_ollama_with_open_tools')
     def test_malformed_tool_calls(self, mock_open_tools, mock_memory, mock_load_config, mock_logger, mock_print):
         """Test handling of malformed tool calls"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -389,7 +389,7 @@ class TestErrorHandling:
             }
         }
         
-        with patch('src.ollama.universal_interface.handle_any_tool_call') as mock_handle:
+        with patch('src.ollama_universal_interface.handle_any_tool_call') as mock_handle:
             mock_handle.return_value = {"error": "Invalid tool call", "success": False}
             
             call_ollama_with_universal_tools("test", use_tools=True)
@@ -397,9 +397,9 @@ class TestErrorHandling:
             mock_handle.assert_called_once()
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface._call_ollama_with_open_tools')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface._call_ollama_with_open_tools')
     def test_empty_response_handling(self, mock_open_tools, mock_memory, mock_load_config, mock_print):
         """Test handling of empty responses"""
         mock_load_config.return_value = {'verbose_output': False}
@@ -415,10 +415,10 @@ class TestVerboseOutput:
     """Test verbose output functionality"""
     
     @patch('builtins.print')
-    @patch('src.ollama.universal_interface.load_config')
-    @patch('src.ollama.universal_interface.memory')
-    @patch('src.ollama.universal_interface._call_ollama_with_open_tools')
-    @patch('src.ollama.universal_interface.handle_any_tool_call')
+    @patch('src.ollama_universal_interface.load_config')
+    @patch('src.ollama_universal_interface.memory')
+    @patch('src.ollama_universal_interface._call_ollama_with_open_tools')
+    @patch('src.ollama_universal_interface.handle_any_tool_call')
     def test_verbose_tool_execution(self, mock_handle_tool, mock_open_tools, mock_memory, mock_load_config, mock_print):
         """Test verbose output during tool execution"""
         mock_load_config.return_value = {'verbose_output': True}

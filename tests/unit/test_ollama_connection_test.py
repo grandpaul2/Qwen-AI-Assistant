@@ -12,7 +12,7 @@ from src.ollama_connection_test import test_ollama_connection
 class TestOllamaConnectionTest(unittest.TestCase):
     """Test the Ollama connection testing functionality"""
 
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_success(self, mock_client_class):
         """Test successful Ollama connection"""
         # Setup mock
@@ -28,7 +28,7 @@ class TestOllamaConnectionTest(unittest.TestCase):
         mock_client_class.assert_called_once()
         mock_client.test_connection.assert_called_once()
 
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_failure(self, mock_client_class):
         """Test Ollama connection failure"""
         # Setup mock
@@ -44,8 +44,8 @@ class TestOllamaConnectionTest(unittest.TestCase):
         mock_client_class.assert_called_once()
         mock_client.test_connection.assert_called_once()
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_client_creation_exception(self, mock_client_class, mock_logger):
         """Test exception during client creation"""
         # Setup mock
@@ -61,8 +61,8 @@ class TestOllamaConnectionTest(unittest.TestCase):
         self.assertIn("Ollama connection test failed", error_call)
         self.assertIn("Failed to create client", error_call)
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_test_method_exception(self, mock_client_class, mock_logger):
         """Test exception during connection test method"""
         # Setup mock
@@ -80,8 +80,8 @@ class TestOllamaConnectionTest(unittest.TestCase):
         self.assertIn("Ollama connection test failed", error_call)
         self.assertIn("Network unreachable", error_call)
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_various_exceptions(self, mock_client_class, mock_logger):
         """Test handling of various exception types"""
         exception_types = [
@@ -111,7 +111,7 @@ class TestOllamaConnectionTest(unittest.TestCase):
                 self.assertIn("Ollama connection test failed", error_message)
                 self.assertIn(str(exception), error_message)
 
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_client_instantiation(self, mock_client_class):
         """Test that client is instantiated correctly"""
         # Setup mock
@@ -125,7 +125,7 @@ class TestOllamaConnectionTest(unittest.TestCase):
         # Verify client instantiation
         mock_client_class.assert_called_once_with()
         
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_ollama_connection_return_type(self, mock_client_class):
         """Test that function returns boolean values"""
         # Test True case
@@ -153,7 +153,7 @@ class TestOllamaConnectionTest(unittest.TestCase):
 class TestConnectionTestIntegration(unittest.TestCase):
     """Integration tests for connection testing"""
 
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_connection_test_workflow(self, mock_client_class):
         """Test the complete connection testing workflow"""
         # Setup mock for successful workflow
@@ -169,8 +169,8 @@ class TestConnectionTestIntegration(unittest.TestCase):
         self.assertEqual(mock_client_class.call_count, 3)
         self.assertEqual(mock_client.test_connection.call_count, 3)
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_error_logging_format(self, mock_client_class, mock_logger):
         """Test that error logging follows expected format"""
         # Setup mock
@@ -195,8 +195,8 @@ class TestConnectionTestIntegration(unittest.TestCase):
 class TestConnectionTestErrorConditions(unittest.TestCase):
     """Test various error conditions for connection testing"""
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_network_related_errors(self, mock_client_class, mock_logger):
         """Test handling of network-related errors"""
         network_errors = [
@@ -221,8 +221,8 @@ class TestConnectionTestErrorConditions(unittest.TestCase):
                 self.assertFalse(result)
                 mock_logger.error.assert_called_once()
 
-    @patch('src.ollama.connection_test.logger')
-    @patch('src.ollama.connection_test.OllamaClient')
+    @patch('src.ollama_connection_test.logger')
+    @patch('src.ollama_connection_test.OllamaClient')
     def test_configuration_errors(self, mock_client_class, mock_logger):
         """Test handling of configuration-related errors"""
         config_errors = [

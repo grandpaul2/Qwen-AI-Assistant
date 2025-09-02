@@ -169,6 +169,12 @@ class MemoryManager:
         # Import logger here to avoid circular imports
         logger = logging.getLogger(__name__)
         logger.debug(f"Added {role} message to conversation, total messages: {len(self.current_conversation)}")
+        
+        # Auto-save after adding message
+        try:
+            self.save_memory()
+        except Exception as e:
+            logger.warning(f"Auto-save failed after adding message: {e}")
     
     def start_new_conversation(self):
         """Move current conversation to recent and start fresh"""

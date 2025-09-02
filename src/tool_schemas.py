@@ -20,7 +20,11 @@ from .exceptions import WorkspaceAIError
 def get_all_tool_schemas() -> List[Dict[str, Any]]:
     """Get tool schemas for all file management functions - backward compatible wrapper"""
     try:
-        return get_all_tool_schemas_with_exceptions()
+        schemas = get_all_tool_schemas_with_exceptions()
+        # If no schemas returned, consider it an error
+        if not schemas:
+            raise WorkspaceAIError("Tool schemas cannot be empty")
+        return schemas
     except Exception as e:
         logging.error(f"Tool schema retrieval failed: {e}")
         print(f"Warning: Tool schema error: {str(e)}")

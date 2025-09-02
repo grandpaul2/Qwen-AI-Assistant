@@ -6,8 +6,9 @@ Basic exceptions focused on tool selection accuracy without verbose error handli
 
 class WorkspaceAIError(Exception):
     """Base exception for WorkspaceAI errors"""
-    def __init__(self, message="", context=None):
+    def __init__(self, message="", **context):
         super().__init__(message)
+        # Store any additional context information
         self.context = context or {}
 
 

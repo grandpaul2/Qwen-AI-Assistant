@@ -733,7 +733,7 @@ class TestMissingLinesCoverage:
             # Force unique name generation that would use timestamp
             result = file_manager_instance.create_file("timestamp_test.txt", "new content")
             # Should create a unique filename using timestamp when counter would be high
-            assert "created as" in result.lower()
+            assert "created successfully as" in result.lower()
     
     def test_read_file_exception_handling(self, file_manager_instance):
         """Test exception handling in read_file (lines 194-197)"""

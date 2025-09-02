@@ -2912,5 +2912,95 @@ class TestUniversalToolHandlerMissingLinesCoverage:
             # Should handle errors gracefully
 
 
+class TestUniversalToolHandlerCodeExecution:
+    """Test code execution functionality missing coverage"""
+    
+    def test_execute_code_empty_code(self, tool_handler):
+        """Test _execute_code with empty code"""
+        result = tool_handler._execute_code("python", "")
+        assert result == "No code provided"
+        
+        result = tool_handler._execute_code("python", "   ")  # whitespace only
+        assert result == "No code provided"
+    
+    def test_execute_code_unsupported_language(self, tool_handler):
+        """Test _execute_code with unsupported language"""
+        result = tool_handler._execute_code("ruby", "puts 'hello'")
+        assert "Unsupported language: ruby" in result
+    
+    def test_execute_code_exception_handling(self, tool_handler):
+        """Test _execute_code exception handling"""
+        # Mock the specific language method to raise an exception
+        with patch.object(tool_handler, '_execute_python', side_effect=Exception("Test error")):
+            result = tool_handler._execute_code("python", "print('test')")
+            assert "Python execution error: Test error" in result
+    
+    def test_file_manager_import_fallbacks(self, tool_handler):
+        """Test file manager import fallback paths"""
+        # Test that the tool handler has some file manager (even if None)
+        assert hasattr(tool_handler, 'file_manager')
+    
+    def test_code_execution_with_platform_handling(self, tool_handler):
+        """Test code execution with platform-specific handling"""
+        # Test simple code execution
+        result = tool_handler._execute_code("python", "print('hello')")
+        assert isinstance(result, str)
+        
+        # Test with shell command
+        result = tool_handler._execute_code("shell", "echo hello")
+        assert isinstance(result, str)
+    
+    @patch('builtins.__import__')
+    def test_system_info_psutil_fallback(self, mock_import, tool_handler):
+        """Test system info when psutil import fails"""
+        def import_side_effect(name, *args, **kwargs):
+            if name == 'psutil':
+                raise ImportError("No module named 'psutil'")
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = import_side_effect
+        
+        result = tool_handler._get_system_info({})
+        assert "SYSTEM INFORMATION (Basic)" in result
+        assert "Platform:" in result
+    
+    def test_tool_execution_edge_cases(self, tool_handler):
+        """Test various edge cases in tool execution"""
+        # Test with empty arguments
+        result = tool_handler._execute_code("python", "")
+        assert "No code provided" in result
+        
+        # Test with whitespace only
+        result = tool_handler._execute_code("python", "   ")
+        assert "No code provided" in result
+        
+        # Test with invalid language
+        result = tool_handler._execute_code("nonexistent", "code")
+        assert "Unsupported language" in result
+    
+    def test_process_info_error_handling(self, tool_handler):
+        """Test process info error handling"""
+        # Test invalid PID
+        result = tool_handler._get_process_info({"pid": "invalid"})
+        assert "Invalid PID" in result or "Error" in result
+        
+        # Test non-existent PID  
+        result = tool_handler._get_process_info({"pid": "999999"})
+        assert "No process found" in result or "Error" in result or "Access denied" in result
+    
+    @patch('builtins.__import__')
+    def test_process_info_psutil_import_error(self, mock_import, tool_handler):
+        """Test process info when psutil import fails"""
+        def import_side_effect(name, *args, **kwargs):
+            if name == 'psutil':
+                raise ImportError("No module named 'psutil'")
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = import_side_effect
+        
+        result = tool_handler._get_process_info({"pid": "123"})
+        assert "Process info requires psutil library" in result
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

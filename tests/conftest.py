@@ -14,8 +14,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from typing import Dict, Any, Generator
 
-# Add src to path for importing modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path for importing src package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.config import APP_CONFIG
 from src.file_manager import FileManager
@@ -128,19 +128,19 @@ def mock_ollama_client():
 
 
 @pytest.fixture
-def file_manager_instance(temp_workspace: str, sample_config: Dict[str, Any]):
+def file_manager_instance(clean_workspace: str, sample_config: Dict[str, Any]):
     """
     Provide a FileManager instance for testing
     
     Args:
-        temp_workspace: Temporary workspace path
+        clean_workspace: Temporary workspace path
         sample_config: Sample configuration
         
     Returns:
         FileManager instance configured for testing
     """
     config = sample_config.copy()
-    config["workspace_path"] = temp_workspace
+    config["workspace_path"] = clean_workspace
     return FileManager(config)
 
 
@@ -160,6 +160,12 @@ def memory_manager_instance(temp_workspace: str, sample_config: Dict[str, Any]):
     config["memory_path"] = os.path.join(temp_workspace, "memory")
     config["auto_save"] = False  # Disable auto-save for tests
     return MemoryManager(config)
+
+
+@pytest.fixture
+def test_config(sample_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Provide test configuration dict for safe mode tests"""
+    return sample_config.copy()
 
 
 # Common test utilities

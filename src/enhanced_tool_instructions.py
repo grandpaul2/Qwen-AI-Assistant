@@ -5,6 +5,7 @@ This module provides improved system prompts and instructions to help
 the AI make better tool selection decisions with context awareness.
 """
 
+import os
 from typing import List, Dict, Any, Optional
 
 def build_enhanced_tool_instruction() -> str:
@@ -241,7 +242,32 @@ def get_context_aware_tool_recommendations(user_message: str, workspace_path: st
         Dictionary with enhanced recommendations and context
     """
     try:
-        # Simple context analysis fallback
+        # Scan workspace files for context
+        workspace_files = []
+        project_languages = set()
+        
+        try:
+            if os.path.exists(workspace_path):
+                for item in os.listdir(workspace_path):
+                    item_path = os.path.join(workspace_path, item)
+                    if os.path.isfile(item_path):
+                        workspace_files.append(item)
+                        # Detect language from file extension
+                        if item.endswith('.py'):
+                            project_languages.add('Python')
+                        elif item.endswith(('.js', '.jsx')):
+                            project_languages.add('JavaScript')
+                        elif item.endswith(('.ts', '.tsx')):
+                            project_languages.add('TypeScript')
+                        elif item.endswith('.json'):
+                            project_languages.add('JSON')
+                        elif item.endswith(('.txt', '.md')):
+                            project_languages.add('Text')
+        except (PermissionError, OSError):
+            # Handle permission errors gracefully
+            workspace_files = []
+            
+        # Simple context analysis
         relevant_tools = []
         for tool in available_tools:
             tool_name = tool['function']['name'].lower()
@@ -259,13 +285,84 @@ def get_context_aware_tool_recommendations(user_message: str, workspace_path: st
         if not relevant_tools:
             relevant_tools = [tool['function']['name'] for tool in available_tools[:3]]
             
+        # Determine project type
+        project_type = "unknown"
+        if any(f.endswith('.py') for f in workspace_files):
+            project_type = "Python project"
+        elif any(f.endswith(('.js', '.jsx', '.ts', '.tsx')) for f in workspace_files):
+            project_type = "JavaScript/TypeScript project"
+        elif any(f.endswith('.json') for f in workspace_files):
+            project_type = "Data/Configuration project"
+            
+        # Generate execution plan for complex messages
+        execution_plan = []
+        message_lower = user_message.lower()
+        
+        # Detect multi-step tasks
+        if any(indicator in message_lower for indicator in ['1.', '2.', '3.', 'step', 'then', 'after', 'next']):
+            # This is a multi-step task, generate execution plan
+            step_number = 1
+            
+            if 'create' in message_lower and ('script' in message_lower or 'file' in message_lower):
+                execution_plan.append({
+                    'step': step_number,
+                    'action': 'create_file',
+                    'purpose': 'Create initial file or script',
+                    'tools': ['file_operations']
+                })
+                step_number += 1
+                
+            if 'read' in message_lower or 'load' in message_lower:
+                execution_plan.append({
+                    'step': step_number,
+                    'action': 'read_data',
+                    'purpose': 'Read or load data',
+                    'tools': ['file_operations', 'code_interpreter']
+                })
+                step_number += 1
+                
+            if 'process' in message_lower or 'calculate' in message_lower or 'statistics' in message_lower:
+                execution_plan.append({
+                    'step': step_number,
+                    'action': 'process_data',
+                    'purpose': 'Process data and calculate results',
+                    'tools': ['code_interpreter', 'calculator']
+                })
+                step_number += 1
+                
+            if 'save' in message_lower and 'result' in message_lower:
+                execution_plan.append({
+                    'step': step_number,
+                    'action': 'save_results',
+                    'purpose': 'Save processed results',
+                    'tools': ['file_operations']
+                })
+                step_number += 1
+                
+            if 'visualization' in message_lower or 'plot' in message_lower or 'chart' in message_lower:
+                execution_plan.append({
+                    'step': step_number,
+                    'action': 'create_visualization',
+                    'purpose': 'Generate visualization or chart',
+                    'tools': ['code_interpreter']
+                })
+            
         return {
             'recommended_tools': relevant_tools,
             'context_analysis': {
-                'workspace_files': [],
-                'fallback': True
+                'workspace_files': workspace_files,
+                'project_context': {
+                    'project_type': project_type,
+                    'languages': list(project_languages)
+                },
+                'intent': {
+                    'primary_action': 'file_operation' if 'file' in user_message.lower() else 'unknown',
+                    'complexity': 'complex' if execution_plan else 'simple',
+                    'domain': 'general'
+                },
+                'fallback': False
             },
-            'execution_plan': []
+            'execution_plan': execution_plan
         }
     except Exception as e:
         # Fallback to basic recommendations if context analysis fails
@@ -273,7 +370,8 @@ def get_context_aware_tool_recommendations(user_message: str, workspace_path: st
             'recommended_tools': [tool['function']['name'] for tool in available_tools[:3]],
             'context_analysis': {
                 'error': str(e),
-                'fallback': True
+                'fallback': True,
+                'workspace_files': []
             },
             'execution_plan': []
         }
@@ -290,13 +388,29 @@ def build_context_aware_instruction(user_message: str, workspace_path: str,
     
     base_instruction = build_enhanced_tool_instruction()
     
+    # Add workspace context if files are present
+    workspace_context = ""
+    workspace_files = recommendations['context_analysis'].get('workspace_files', [])
+    if workspace_files:
+        workspace_context = f"""
+
+WORKSPACE CONTEXT:
+Available files in current workspace: {', '.join(workspace_files)}
+"""
+    else:
+        workspace_context = """
+
+WORKSPACE CONTEXT:
+Workspace appears to be empty or no files detected.
+"""
+    
     # Add context-specific guidance
     context_guidance = f"""
 
 CONTEXT-AWARE GUIDANCE FOR THIS REQUEST:
 
 Based on analysis of your request "{user_message}" and the current workspace:
-
+{workspace_context}
 Recommended Tools (in priority order):
 {', '.join(recommendations['recommended_tools'][:5])}
 

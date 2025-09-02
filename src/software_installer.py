@@ -85,7 +85,10 @@ def generate_install_commands_with_exceptions(software: str, method: str = "auto
         raise error
     
     method_clean = method.strip().lower()
-    valid_methods = ["auto", "package_manager", "official", "manual", "winget", "brew", "apt", "dnf", "yum", "pacman", "zypper", "snap", "chocolatey"]
+    valid_methods = [
+        "auto", "package_manager", "official", "manual", "winget", "brew",
+        "apt", "dnf", "yum", "pacman", "zypper", "snap", "chocolatey", "direct"
+    ]
     if method_clean not in valid_methods:
         error = WorkspaceAIError(f"Invalid method '{method}'. Valid options: {', '.join(valid_methods)}")
         error.context["provided_method"] = method
@@ -419,13 +422,21 @@ def generate_install_commands_with_exceptions(software: str, method: str = "auto
         return result
         
     except Exception as e:
-        # Handle unexpected errors
-        converted_error = handle_exception("install_command_generation", e)
-        converted_error.context["software"] = software_clean
-        converted_error.context["method"] = method_clean
-        converted_error.context["platform"] = platform.system()
-        logging.error(f"Install command generation failed: {converted_error}")
-        raise converted_error
+        # Handle unexpected errors and wrap in WorkspaceAIError if needed
+        err = handle_exception("install_command_generation", e)
+        # Ensure we have a WorkspaceAIError to attach context
+        if not isinstance(err, WorkspaceAIError):
+            err = WorkspaceAIError(str(e))
+        # Attach additional context
+        err.context["software"] = software_clean
+        err.context["method"] = method_clean
+        # Safely assign platform name without raising
+        try:
+            err.context["platform"] = platform.system()
+        except Exception:
+            err.context["platform"] = None
+        logging.error(f"Install command generation failed: {err}")
+        raise err
 
 
 def check_software_installed(software: str) -> Dict[str, Any]:

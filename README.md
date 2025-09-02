@@ -92,51 +92,42 @@ t: to use tools
 ## Architecture v3.0 - Flattened Modular Design
 
 ```
-main.py               # Entry point
-src/                  # Core modular architecture (flat structure)
-├── app.py            # Main application logic and interface
-├── config.py         # Configuration management and constants
-├── memory.py         # Conversation memory and persistence
-├── file_manager.py   # Secure file operations with enhanced safety
-├── universal_tool_handler.py  # Dynamic tool execution engine
-├── tool_schemas.py   # Tool definitions and schemas
-├── enhanced_tool_instructions.py  # Context-aware instruction system
-├── utils.py          # Utility functions and helpers
-├── exceptions.py     # Comprehensive error handling
-├── progress.py       # Progress display and tracking
-├── software_installer.py  # System software installation
-├── ollama_client.py  # Ollama API client with connection management
-├── ollama_universal_interface.py  # Main Ollama interface
-└── ollama_connection_test.py      # Connection testing utilities
+main.py                              # Entry point
+src/                                 # Core modular architecture (flat structure)
+├── app.py                           # Main application logic and interface
+├── config.py                        # Configuration management and constants
+├── memory.py                        # Conversation memory and persistence
+├── file_manager.py                  # Secure file operations with enhanced safety
+├── universal_tool_handler.py        # Dynamic tool execution engine
+├── tool_schemas.py                  # Tool definitions and schemas
+├── enhanced_tool_instructions.py    # Context-aware instruction system
+├── utils.py                         # Utility functions and helpers
+├── exceptions.py                    # Comprehensive error handling
+├── progress.py                      # Progress display and tracking
+├── software_installer.py            # System software installation
+├── ollama_client.py                 # Ollama API client with connection management
+├── ollama_universal_interface.py    # Main Ollama interface
+└── ollama_connection_test.py        # Connection testing utilities
 
-tests/                # Comprehensive testing suite
-├── conftest.py       # Test configuration and fixtures
-├── unit/             # Unit tests for all modules
-│   ├── test_app.py                         # Application logic tests
-│   ├── test_config.py                      # Configuration tests
-│   ├── test_enhanced_tool_instructions.py  # Tool instructions tests
-│   ├── test_exceptions.py                  # Exception handling tests
-│   ├── test_file_manager.py                # File operations tests
-│   ├── test_memory.py                      # Memory system tests
-│   ├── test_ollama_client.py               # Ollama client tests
-│   ├── test_ollama_connection_test.py      # Ollama connection tests
-│   ├── test_ollama_universal_interface.py  # Ollama interface tests
-│   ├── test_progress.py                    # Progress display tests
-│   ├── test_software_installer.py          # Software installer tests
-│   ├── test_tool_schemas.py                # Tool schema tests
-│   ├── test_universal_tool_handler.py      # Tool handler tests
-│   └── test_utils.py                       # Utility function tests
-├── security/         # Security and safety tests
-└── system/           # Integration and system tests
+tests/                               # Comprehensive testing suite
+├── conftest.py                      # Test configuration and fixtures
+├── unit/                            # Unit tests for all modules
+├── security/                        # Security and safety tests
+└── system/                          # Integration and system tests
 
-WorkspaceAI/          # Auto-created runtime folder
-├── workspace/        # File operations sandbox
-├── memory/          # Conversation history storage
-└── config.json     # User settings and configuration
+WorkspaceAI/                         # Auto-created runtime folder
+├── workspace/                       # File operations sandbox
+├── memory/                          # Conversation history storage
+└── config.json                     # User settings and configuration
 
-archive/              # Historical components and old tests
-├── deprecated_components/  # Previous architecture components
-└── old tests/             # Archived obsolete tests
+archive/                             # Historical components and old tests
+├── deprecated_components/           # Previous architecture components
+└── old tests/                       # Archived obsolete tests
+
+docs/                                # Project documentation
+├── architecture/                    # Architectural documentation and design decisions
+├── reports/                         # Implementation progress and status reports
+└── research/                        # Research notes and experimental findings
 ```
 
 ## 🧪 Testing Suite

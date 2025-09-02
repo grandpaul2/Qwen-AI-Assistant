@@ -67,9 +67,9 @@ class QuickTestRunner:
         ]
         
         try:
-            # Import and test quickly
+            # Import enhanced interface shim
             sys.path.insert(0, os.getcwd())
-            from src.ollama.enhanced_interface import get_enhanced_components
+            from src.enhanced_interface import get_enhanced_components
             
             context, intent_classifier, tool_selector = get_enhanced_components()[:3]
             
@@ -125,7 +125,7 @@ class QuickTestRunner:
         
         try:
             sys.path.insert(0, os.getcwd())
-            from src.ollama.enhanced_interface import get_enhanced_components
+            from src.enhanced_interface import get_enhanced_components
             
             context, intent_classifier, tool_selector = get_enhanced_components()[:3]
             
@@ -178,7 +178,7 @@ class QuickTestRunner:
         
         try:
             sys.path.insert(0, os.getcwd())
-            from src.ollama.enhanced_interface import get_enhanced_components
+            from src.enhanced_interface import get_enhanced_components
             
             context, intent_classifier, tool_selector = get_enhanced_components()[:3]
             
@@ -236,7 +236,7 @@ class QuickTestRunner:
         
         try:
             sys.path.insert(0, os.getcwd())
-            from src.ollama.enhanced_interface import get_enhanced_components
+            from src.enhanced_interface import get_enhanced_components
             
             context, intent_classifier, tool_selector = get_enhanced_components()[:3]
             

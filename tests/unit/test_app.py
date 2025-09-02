@@ -994,9 +994,6 @@ class TestAppMissingLinesCoverage(unittest.TestCase):
     @patch('builtins.print')
     def test_search_kb_validation_edge_cases(self, mock_print, mock_load, mock_save, mock_input):
         """Test search KB validation edge cases - covers validation lines"""
-        config = {'search_max_file_kb': 1024}
-        mock_load.return_value = config
-        
         # Test edge cases for KB input
         test_cases = [
             ('0', 1024),        # Zero value
@@ -1009,15 +1006,13 @@ class TestAppMissingLinesCoverage(unittest.TestCase):
         ]
         
         for input_val, expected in test_cases:
-            mock_load.return_value = {'search_max_file_kb': 1024}
+            config = {'search_max_file_kb': 1024}
+            mock_load.return_value = config
             mock_input.side_effect = ['5', input_val, 'x']
             
             configure_settings()
             
-            if expected == 999999:
-                self.assertEqual(config['search_max_file_kb'], expected)
-            else:
-                self.assertEqual(config['search_max_file_kb'], 1024)  # Should remain unchanged for invalid
+            self.assertEqual(config['search_max_file_kb'], expected)
     
     @patch('src.app.logger')
     @patch('src.app.platform.system')
@@ -1073,13 +1068,14 @@ class TestAppMissingLinesCoverage(unittest.TestCase):
         # Should handle package manager detection failure gracefully
         mock_logger.error.assert_any_call("Package manager detection failed")
     
+    @patch('src.app.configure_settings')
     @patch('src.app.logger')
     @patch('src.app.platform.system')
     @patch('src.app.memory')
     @patch('src.app.file_manager')
     @patch('src.app.input')
     @patch('builtins.print')
-    def test_command_processing_error_paths(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger):
+    def test_command_processing_error_paths(self, mock_print, mock_input, mock_fm, mock_memory, mock_platform, mock_logger, mock_configure):
         """Test command processing error paths - covers lines 180-184, 194-198"""
         mock_platform.return_value = 'Windows'
         mock_fm.safe_mode = True
@@ -1087,12 +1083,8 @@ class TestAppMissingLinesCoverage(unittest.TestCase):
         mock_memory.summarized_conversations = []
         
         # Test error in command processing
-        def command_side_effect(*args):
-            if '/config' in args[0]:
-                raise Exception("Config command failed")
-            return 'exit'
-        
-        mock_input.side_effect = command_side_effect
+        mock_configure.side_effect = Exception("Config command failed")
+        mock_input.side_effect = ['/config', 'exit']
         
         try:
             interactive_mode()
@@ -1336,6 +1328,126 @@ class TestAppMissingLinesCoverage(unittest.TestCase):
             main()
         except Exception as e:
             self.assertIn("Interactive mode failed", str(e))
+
+
+class TestConfigLoadingFailure(unittest.TestCase):
+    """Test configuration loading failure scenarios"""
+    
+    @patch('src.config.load_config')
+    def test_configure_settings_config_load_none(self, mock_load):
+        """Test configure_settings when load_config returns None"""
+        from src.exceptions import ConfigurationError
+        
+        mock_load.return_value = None
+        
+        with self.assertRaises(ConfigurationError) as cm:
+            configure_settings()
+        
+        self.assertIn("Failed to load configuration", str(cm.exception))
+    
+    @patch('src.app.input')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_configure_settings_keyboard_interrupt(self, mock_print, mock_load, mock_input):
+        """Test keyboard interrupt during configuration"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        mock_input.side_effect = KeyboardInterrupt()
+        
+        result = configure_settings()
+        
+        self.assertEqual(result, config)
+        mock_print.assert_any_call("\nConfiguration cancelled")
+    
+    @patch('src.app.input')
+    @patch('src.config.load_config')
+    @patch('builtins.print')
+    def test_configure_settings_empty_choice(self, mock_print, mock_load, mock_input):
+        """Test empty choice input handling"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        mock_input.side_effect = ['', 'x']  # Empty then exit
+        
+        configure_settings()
+        
+        mock_print.assert_any_call("Please enter a choice")
+    
+    @patch('src.app.input')
+    @patch('src.config.load_config')
+    @patch('src.config.save_config')
+    @patch('builtins.print')
+    def test_configure_settings_model_name_too_long(self, mock_print, mock_save, mock_load, mock_input):
+        """Test model name validation - too long"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        # First input '1' to select model change, then long model name, then 'x' to exit
+        long_model = 'a' * 101  # 101 characters
+        mock_input.side_effect = ['1', long_model, 'x']
+        
+        configure_settings()
+        
+        mock_print.assert_any_call("Model name too long (max 100 characters)")
+    
+    @patch('src.app.input')
+    @patch('src.config.load_config')
+    @patch('src.config.save_config')
+    @patch('builtins.print')
+    def test_configure_settings_model_name_invalid_chars(self, mock_print, mock_save, mock_load, mock_input):
+        """Test model name validation - invalid characters"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        # First input '1' to select model change, then invalid model name, then 'x' to exit
+        mock_input.side_effect = ['1', 'invalid@model#name!', 'x']
+        
+        configure_settings()
+        
+        mock_print.assert_any_call("Model name contains invalid characters")
+    
+    @patch('src.app.input')
+    @patch('src.config.load_config')
+    @patch('src.config.save_config')
+    @patch('builtins.print')
+    def test_configure_settings_model_update_success(self, mock_print, mock_save, mock_load, mock_input):
+        """Test successful model name update"""
+        config = {
+            'model': 'qwen2.5:3b',
+            'safe_mode': True,
+            'ollama_host': 'localhost:11434',
+            'verbose_output': False,
+            'search_max_file_kb': 1024
+        }
+        mock_load.return_value = config
+        # First input '1' to select model change, then valid new model, then 'x' to exit
+        mock_input.side_effect = ['1', 'llama3.1:8b', 'x']
+        
+        configure_settings()
+        
+        mock_print.assert_any_call("Model updated to: llama3.1:8b")
+        assert config['model'] == 'llama3.1:8b'
 
 
 if __name__ == '__main__':
