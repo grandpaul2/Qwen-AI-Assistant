@@ -11,7 +11,7 @@ from .config import CONSTANTS, APP_CONFIG
 from .memory import MemoryManager, memory
 from .file_manager import FileManager, file_manager
 from .ollama import call_ollama_with_tools
-from .main import main, interactive_mode
+from .app import main, interactive_mode
 
 __all__ = [
     'CONSTANTS', 'APP_CONFIG', 'MemoryManager', 'FileManager', 

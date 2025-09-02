@@ -1,13 +1,13 @@
 # WorkspaceAI v3.0
 
-AI assistant with smart tool selection and file management capabilities. Works with Ollama models (optimized for qwen2.5:3b).
+AI assistant with universal tool system and secure file management. Works with Ollama models (optimized for qwen2.5:3b).
 
 ## Quick Start
 
 ### Installation
 Download only these files from the repository:
 - `src/` folder (complete directory)
-- `main.py`
+- `main.py` (entry point)
 - `requirements.txt`
 
 ### Setup
@@ -29,7 +29,7 @@ chmod +x install_linux.sh && ./install_linux.sh
 
 ## Key Features
 
-- **Smart Tool Selection**: Context-aware file operation detection
+- **Universal Tool System**: Dynamic tool execution handles any request
 - **Secure Workspace**: All operations contained in `WorkspaceAI/workspace/`
 - **Persistent Memory**: Conversation history across sessions
 - **18+ File Operations**: Create, read, write, delete, copy, move, compress
@@ -68,10 +68,11 @@ The AI intelligently maps requests to available tools - just describe what you w
 
 ### Chat Interface
 ```bash
-
 t: to use tools
+chat: to use without tools
 
 /new        # Start new conversation
+/tools      # List available tools
 /memory     # Show memory status  
 /config     # Configure settings
 /reset      # Clear memory
@@ -81,17 +82,23 @@ exit        # Quit
 ## Architecture
 
 ```
-main.py                 # Entry point
-src/                   # Core modules
-├── main.py           # Application logic
-├── config.py         # Configuration
-├── memory.py         # Conversation memory
-├── file_manager.py   # File operations
-├── ollama/           # Ollama integration
-│   ├── enhanced_interface.py    # Context-aware interface
-│   ├── tool_executor.py        # Direct tool execution
-│   └── legacy_interface.py     # Backward compatibility
-└── ...               # Other modules
+main.py               # Entry point
+src/                  # Core modules
+├── app.py            # Main application logic and interface
+├── config.py         # Configuration management
+├── memory.py         # Conversation memory and persistence
+├── file_manager.py   # Secure file operations
+├── universal_tool_handler.py  # Dynamic tool execution engine
+├── tool_schemas.py   # Tool definitions and schemas
+├── enhanced_tool_instructions.py  # Context-aware instructions
+├── utils.py          # Utility functions
+├── exceptions.py     # Error handling
+├── progress.py       # Progress display
+├── software_installer.py  # System software installation
+└── ollama/           # Ollama integration
+    ├── client.py     # Ollama API client  
+    ├── universal_interface.py  # Main Ollama interface
+    └── connection_test.py      # Connection testing
 WorkspaceAI/          # Auto-created runtime folder
 ├── workspace/        # File operations sandbox
 ├── memory/          # Conversation history
@@ -142,4 +149,4 @@ Auto-triggers file operations: `file`, `folder`, `create`, `delete`, `read`, `wr
 - Dependencies: `requests`, `tqdm`
 
 ---
-*Streamlined AI assistant focused on tool selection accuracy and file management.*
+*Streamlined AI assistant with universal tool system and secure workspace management.*

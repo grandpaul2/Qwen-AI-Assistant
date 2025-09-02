@@ -3,7 +3,8 @@
 ## Current Active Components (Post-Cleanup)
 
 ### Core System
-- `src/main.py` - Main entry point and interactive interface
+- `main.py` - Simple entry point that imports from src
+- `src/app.py` - Main application logic and interactive interface
 - `src/config.py` - Configuration management and settings
 - `src/memory.py` - Conversation memory and persistence
 - `src/file_manager.py` - Secure file operations within workspace

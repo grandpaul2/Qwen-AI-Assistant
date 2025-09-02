@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 try:
     # Import the main functionality from modular package
-    from src import main
+    from src import app
     print("🤖 WorkspaceAI v3.0 - Modular Architecture")
     print("Enhanced AI Assistant with collaborative development support")
     print("=" * 60)
@@ -23,7 +23,7 @@ except ImportError as e:
 
 if __name__ == "__main__":
     try:
-        main()
+        app.main()
     except KeyboardInterrupt:
         print("\n\nGoodbye! 👋")
         sys.exit(0)
