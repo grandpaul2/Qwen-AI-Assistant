@@ -68,18 +68,14 @@ The AI intelligently maps requests to available tools - just describe what you w
 
 ### Chat Interface
 ```bash
+
+t: to use tools
+
 /new        # Start new conversation
 /memory     # Show memory status  
 /config     # Configure settings
 /reset      # Clear memory
 exit        # Quit
-```
-
-### Force Modes
-```bash
-chat: your question          # Force chat mode
-tools: your command          # Force file tools
-install: software name       # Get install commands
 ```
 
 ## Architecture
