@@ -591,7 +591,7 @@ def _print_enhanced_debug_info(selected_tool_info: Dict[str, Any], debug_info: D
 
 # Enhanced detection functions
 def detect_file_intent_enhanced(prompt: str) -> bool:
-    """Enhanced file intent detection with context awareness"""
+    """Enhanced file intent detection with hybrid fallback for accuracy"""
     try:
         context = get_global_context()
         intent_classifier = EnhancedIntentClassifier(context)
@@ -608,13 +608,53 @@ def detect_file_intent_enhanced(prompt: str) -> bool:
             if input_analysis.get("mentions_specific_files"):
                 return True  # Definitely file-related
         
+        # HYBRID FALLBACK: If enhanced classifier returns UNCLEAR or low confidence,
+        # fall back to basic regex patterns for obvious file operations
+        if intent == 'UNCLEAR' or confidence < 0.3:
+            return _basic_file_intent_patterns(prompt)
+        
         return base_file_intent
         
     except Exception as e:
         logger.error(f"Enhanced file intent detection failed: {e}")
         # Fallback to basic detection
-        from .legacy_interface import detect_file_intent
-        return detect_file_intent(prompt)
+        return _basic_file_intent_patterns(prompt)
+
+
+def _basic_file_intent_patterns(prompt: str) -> bool:
+    """Basic regex pattern matching for clear file operations"""
+    import re
+    
+    # Clear file operation patterns that should always trigger tools
+    file_patterns = [
+        r'\b(create|make|generate|build)\s+.*\b(file|folder|directory)\b',
+        r'\b(save|write|store|put)\s+.*\b(to|in|into)\s+.*\b(workspace|folder|directory)\b', 
+        r'\b(read|open|view|show|display)\s+.*\b(file|document)\b',
+        r'\b(copy|move|delete|backup|remove)\s+.*\b(file|folder)\b',
+        r'\blist\s+(all\s+)?files\b',
+        r'\bsearch\s+for\s+.*\bfile',
+        r'\bfind\s+.*\bfile',
+        r'\bcopy\s+\w+\.\w+\s+to\s+\w+\.\w+',  # copy file.ext to file2.ext
+        r'\bmove\s+\w+\.\w+\s+to\s+\w+\.\w+',  # move file.ext to file2.ext  
+        r'\bdelete\s+\w+\.\w+',                # delete file.ext
+        r'\bremove\s+\w+\.\w+',                # remove file.ext
+        r'\bbackup\s+\w+\.\w+',                # backup file.ext
+        r'\bcompress\s+.*\bfile',
+        r'\bzip\s+.*\bfile'
+    ]
+    
+    prompt_lower = prompt.lower()
+    
+    # Check for clear file operation patterns
+    for pattern in file_patterns:
+        if re.search(pattern, prompt_lower, re.IGNORECASE):
+            return True
+    
+    # Check for file extensions (strong indicator of file operations)
+    if re.search(r'\.\w{2,4}\b', prompt):  # .txt, .json, .py, etc.
+        return True
+    
+    return False
 
 
 # Backward compatibility function - enhanced version
