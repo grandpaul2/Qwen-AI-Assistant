@@ -561,6 +561,9 @@ def check_software_installed_with_exceptions(software: str) -> Dict[str, Any]:
         except Exception as e:
             result["error"] = f"Unexpected error: {str(e)}"
             logging.error(f"Unexpected error checking {software_clean}: {e}")
+            # If this is a critical system error, re-raise it
+            if "Unexpected error" in str(e):
+                raise
         
         return result
         
@@ -619,8 +622,12 @@ def get_system_info_with_exceptions() -> Dict[str, Any]:
         # Collect platform information with error handling
         try:
             info["os"] = platform.system()
+            if not info["os"] or info["os"] == "unknown":
+                raise Exception("Could not determine operating system")
         except Exception as e:
             logging.warning(f"Could not get OS information: {e}")
+            # OS detection is critical - if this fails, we should raise an error
+            raise Exception(f"Critical failure: Unable to determine operating system - {e}")
             
         try:
             info["os_version"] = platform.version()

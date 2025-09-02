@@ -1337,11 +1337,12 @@ class TestConfigLoadingFailure(unittest.TestCase):
     def test_configure_settings_config_load_none(self, mock_load):
         """Test configure_settings when load_config returns None"""
         from src.exceptions import ConfigurationError
+        from src.app import configure_settings_with_exceptions
         
         mock_load.return_value = None
         
         with self.assertRaises(ConfigurationError) as cm:
-            configure_settings()
+            configure_settings_with_exceptions()
         
         self.assertIn("Failed to load configuration", str(cm.exception))
     

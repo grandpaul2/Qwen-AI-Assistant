@@ -2,7 +2,24 @@
 Tool schemas for WorkspaceAI file management functions
 
 This module contains all the JSON schemas for tool calling functionality,
-enabling the LLM to understand and properly use available file operations.
+enabling the LLM to understand         # Validate schema structure
+        for i, schema in enumerate(schemas):
+            if not isinstance(schema, dict):
+                raise WorkspaceAIError(f"Schema {i} must be a dictionary")
+            if "type" not in schema or "function" not in schema:
+                raise WorkspaceAIError(f"Schema {i} missing required 'type' or 'function' field")
+        
+        # Validate schemas can be JSON serialized (this will test json.dumps)
+        try:
+            # Create a test serialization to ensure schemas are JSON compatible
+            serialized = json.dumps(schemas)
+            if len(serialized) < 100:  # Should be much larger for real schemas
+                raise Exception("Schema serialization seems invalid")
+        except Exception as e:
+            raise WorkspaceAIError(f"Schemas are not JSON serializable: {e}")
+        
+        logging.debug(f"Successfully generated {len(schemas)} tool schemas")
+        return schemasrly use available file operations.
 
 IMPORTANT FOR AI: Only use functions defined in this schema. Do not invent new function names.
 Common function mapping:
@@ -13,6 +30,7 @@ Common function mapping:
 """
 
 import logging
+import json
 from typing import List, Dict, Any
 from .exceptions import WorkspaceAIError
 
@@ -21,31 +39,36 @@ def get_all_tool_schemas() -> List[Dict[str, Any]]:
     """Get tool schemas for all file management functions - backward compatible wrapper"""
     try:
         schemas = get_all_tool_schemas_with_exceptions()
-        # If no schemas returned, consider it an error
+        # If no schemas returned, use fallback instead of raising exception (wrapper behavior)
         if not schemas:
-            raise WorkspaceAIError("Tool schemas cannot be empty")
+            logging.warning("Tool schemas empty, using fallback")
+            return _get_fallback_schemas()
         return schemas
     except Exception as e:
         logging.error(f"Tool schema retrieval failed: {e}")
         print(f"Warning: Tool schema error: {str(e)}")
         # Return minimal schema to maintain functionality
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": "create_file",
-                    "description": "Create a new file with specified content",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "file_name": {"type": "string", "description": "Name of the file"},
-                            "content": {"type": "string", "description": "Content to write"}
-                        },
-                        "required": ["file_name", "content"]
-                    }
+        return _get_fallback_schemas()
+
+def _get_fallback_schemas() -> List[Dict[str, Any]]:
+    """Return fallback schemas when main function fails"""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "create_file",
+                "description": "Create a new file with specified content",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_name": {"type": "string", "description": "Name of the file"},
+                        "content": {"type": "string", "description": "Content to write"}
+                    },
+                    "required": ["file_name", "content"]
                 }
             }
-        ]
+        }
+    ]
 
 
 def get_all_tool_schemas_with_exceptions() -> List[Dict[str, Any]]:

@@ -33,17 +33,25 @@ def call_ollama_with_universal_tools(prompt: str, model: Optional[str] = None, u
         logger.error(f"Failed to load config: {e}")
         verbose_output = False
         
-    # Store user message
-    memory.add_message("user", prompt)
-    
-    if not use_tools:
-        response = _simple_chat_without_tools(prompt, model, verbose_output)
-        if response:
-            print(response)
-            memory.add_message("assistant", response)
-        return response
-    else:
-        return _call_ollama_with_open_tools(prompt, model, verbose_output)
+    try:
+        # Store user message
+        memory.add_message("user", prompt)
+        
+        if not use_tools:
+            response = _simple_chat_without_tools(prompt, model, verbose_output)
+            if response:
+                print(response)
+                memory.add_message("assistant", response)
+                memory.save_memory_async()
+            return response
+        else:
+            response = _call_ollama_with_open_tools(prompt, model, verbose_output)
+            if response is None:
+                print("❌ No response from Ollama")
+            return response
+    except Exception as e:
+        logger.error(f"Error in universal tools call: {e}")
+        return None
 
 
 def _simple_chat_without_tools(prompt: str, model: Optional[str], verbose_output: Optional[bool]) -> Optional[str]:
@@ -105,6 +113,29 @@ def _call_ollama_with_open_tools(prompt: str, model: Optional[str], verbose_outp
             print(f"🔧 Available tool categories: {[tool['function']['name'] for tool in open_tools]}")
         # Make the API call
         response = client.chat_completion(context_messages, open_tools)
+        
+        # Process any tool calls in the response
+        if response and isinstance(response, dict):
+            if "message" in response and "tool_calls" in response["message"]:
+                tool_calls = response["message"]["tool_calls"]
+                # Add assistant message with tool calls to memory
+                assistant_content = response["message"].get("content", "")
+                memory.add_message("assistant", assistant_content, tool_calls)
+                
+                if tool_calls:
+                    # Import and call the universal tool handler
+                    from .universal_tool_handler import handle_any_tool_call
+                    for tool_call in tool_calls:
+                        try:
+                            result = handle_any_tool_call(tool_call)
+                            if verbose_output:
+                                print(f"🔧 Tool result: {result}")
+                        except Exception as e:
+                            logger.error(f"Tool execution failed: {e}")
+                
+                # Save memory after processing
+                memory.save_memory_async()
+        
         return response
     except Exception as e:
         logger.error(f"Error in open tool call: {e}")
@@ -139,4 +170,9 @@ Examples:
 
 # Aliases for tests
 _get_open_tool_schemas = get_context_aware_tool_schemas
-call_ollama_with_tools = call_ollama_with_universal_tools
+
+def call_ollama_with_tools(prompt: str, model: Optional[str] = None, use_tools: bool = True):
+    """Backward compatibility wrapper for call_ollama_with_universal_tools"""
+    config = load_config()
+    verbose_output = config.get('verbose_output', False)
+    return call_ollama_with_universal_tools(prompt, model, use_tools, verbose_output)

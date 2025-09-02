@@ -110,6 +110,12 @@ def show_progress_with_exceptions(description, duration=None):
         logging.error(f"Progress display failed: {error}")
         raise error
     
+    if not description.strip():
+        error = WorkspaceAIError("Description cannot be empty")
+        pass  # Simplified
+        logging.error(f"Progress display failed: {error}")
+        raise error
+    
     # Handle duration parameter
     if duration is None:
         try:
@@ -151,10 +157,8 @@ def show_progress_with_exceptions(description, duration=None):
         print("\nOperation interrupted by user")
         raise
     except Exception as e:
-        # Handle unexpected errors
-        converted_error = handle_exception("progress_display", e)
-        pass  # Simplified
-        pass  # Simplified
+        # Handle unexpected errors - convert to WorkspaceAIError for consistency
+        converted_error = WorkspaceAIError(f"Progress display failed: {e}")
         logging.error(f"Progress display failed: {converted_error}")
         raise converted_error
 
@@ -183,7 +187,9 @@ def is_safe_filename_with_exceptions(filename):
     """
     # Handle None input
     if filename is None:
-        return False
+        error = WorkspaceAIError("Filename cannot be None")
+        logging.error(f"Filename safety check failed: {error}")
+        raise error
     
     # Check type
     if not isinstance(filename, str):
@@ -193,8 +199,10 @@ def is_safe_filename_with_exceptions(filename):
         raise error
     
     # Empty filename check
-    if not filename:
-        return False
+    if not filename or filename.strip() == "":
+        error = WorkspaceAIError("Filename cannot be empty")
+        logging.error(f"Filename safety check failed: {error}")
+        raise error
     
     try:
         # Check for path traversal attempts
@@ -249,7 +257,13 @@ def sanitize_filename_with_exceptions(filename):
     Raises:
         WorkspaceAIError: For filename processing issues
     """
-    # Handle None/empty input
+    # Handle None input
+    if filename is None:
+        error = WorkspaceAIError("Filename cannot be None")
+        logging.error(f"Filename sanitization failed: {error}")
+        raise error
+        
+    # Handle empty input
     if not filename:
         return "file"
     
@@ -259,14 +273,15 @@ def sanitize_filename_with_exceptions(filename):
         pass  # Simplified
         logging.error(f"Filename sanitization failed: {error}")
         raise error
+        raise error
     
     try:
         # Remove path separators and dangerous characters
         sanitized = filename.replace('/', '_').replace('\\', '_').replace('..', '_')
         sanitized = ''.join(c for c in sanitized if c.isalnum() or c in '._-')
         
-        # Ensure it's not empty after sanitization
-        if not sanitized:
+        # Ensure it's not empty after sanitization or just underscores
+        if not sanitized or sanitized.replace('_', '').replace('.', '').replace('-', '') == '':
             return "file"
         
         # Truncate if too long
@@ -293,11 +308,14 @@ def get_unique_filename(directory, base_filename):
     try:
         return get_unique_filename_with_exceptions(directory, base_filename)
     except Exception as e:
-        # Log error but return safe default in backward compatibility
+        # Log error but provide fallback filename for graceful degradation
         logging.error(f"Unique filename generation failed: {e}")
         print(f"Warning: Unique filename generation error: {str(e)}")
+        # Provide a fallback filename with timestamp
         import time
-        return f"file_{int(time.time())}.txt"
+        timestamp = str(int(time.time()))
+        fallback_name = f"file_{timestamp}.txt"
+        return fallback_name
 
 def get_unique_filename_with_exceptions(directory, base_filename):
     """
@@ -337,6 +355,17 @@ def get_unique_filename_with_exceptions(directory, base_filename):
     if not isinstance(base_filename, str):
         error = WorkspaceAIError(f"Base filename must be a string, got {type(base_filename).__name__}")
         pass  # Simplified
+        logging.error(f"Unique filename generation failed: {error}")
+        raise error
+    
+    # Check for empty strings
+    if not directory or directory.strip() == "":
+        error = WorkspaceAIError("Directory cannot be empty")
+        logging.error(f"Unique filename generation failed: {error}")
+        raise error
+    
+    if not base_filename or base_filename.strip() == "":
+        error = WorkspaceAIError("Base filename cannot be empty")
         logging.error(f"Unique filename generation failed: {error}")
         raise error
     
@@ -480,12 +509,20 @@ def validate_json_string_with_exceptions(json_str):
     
     # Handle None input
     if json_str is None:
-        return False
+        error = WorkspaceAIError("JSON string cannot be None")
+        logging.error(f"JSON validation failed: {error}")
+        raise error
     
     # Check type
     if not isinstance(json_str, str):
         error = WorkspaceAIError(f"JSON string must be a string, got {type(json_str).__name__}")
         pass  # Simplified
+        logging.error(f"JSON validation failed: {error}")
+        raise error
+    
+    # Check for empty string
+    if not json_str or json_str.strip() == "":
+        error = WorkspaceAIError("JSON string cannot be empty")
         logging.error(f"JSON validation failed: {error}")
         raise error
     
@@ -558,6 +595,13 @@ def generate_install_commands_with_exceptions(software, method="auto"):
     if not isinstance(method, str):
         error = WorkspaceAIError(f"Method must be a string, got {type(method).__name__}")
         pass  # Simplified
+        logging.error(f"Install command generation failed: {error}")
+        raise error
+    
+    # Validate method parameter
+    valid_methods = ["auto", "manual", "apt", "dnf", "pacman", "zypper", "brew"]
+    if method not in valid_methods:
+        error = WorkspaceAIError(f"Invalid method '{method}'. Valid methods: {', '.join(valid_methods)}")
         logging.error(f"Install command generation failed: {error}")
         raise error
     
