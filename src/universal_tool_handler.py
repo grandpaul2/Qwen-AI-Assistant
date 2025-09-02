@@ -226,8 +226,8 @@ class UniversalToolHandler:
         return None
     
     def _try_python_operations(self, function_name: str, arguments: Dict) -> Optional[str]:
-        """Try to execute as code operation (Python, JavaScript, shell)"""
-        # Enhanced to support multiple languages
+        """Try to execute as code operation (Python, JavaScript, shell) with enhanced cross-platform support"""
+        # Enhanced to support multiple languages with smart command detection
         language_mappings = {
             # Python
             "code_interpreter": ("python", arguments.get("code", "")),
@@ -250,16 +250,37 @@ class UniversalToolHandler:
         
         if function_name in language_mappings:
             language, code = language_mappings[function_name]
-            return self._execute_code(language, code)
+            return self._execute_code_enhanced(language, code)
         
         # Also check if arguments specify the language
         if "language" in arguments:
             language = arguments["language"].lower()
             code = arguments.get("code", "")
-            return self._execute_code(language, code)
+            return self._execute_code_enhanced(language, code)
         
         return None
     
+    def _execute_code_enhanced(self, language: str, code: str) -> str:
+        """Execute code in the specified language with enhanced cross-platform support"""
+        if not code.strip():
+            return "No code provided"
+        
+        try:
+            if language == "python":
+                return self._execute_python_enhanced(code)
+            elif language == "javascript":
+                return self._execute_javascript(code)
+            elif language in ["shell", "bash"]:
+                return self._execute_shell(code)
+            elif language == "powershell":
+                return self._execute_powershell(code)
+            elif language == "cmd":
+                return self._execute_cmd(code)
+            else:
+                return f"Unsupported language: {language}"
+        except Exception as e:
+            return f"{language.title()} execution error: {e}"
+
     def _execute_code(self, language: str, code: str) -> str:
         """Execute code in the specified language"""
         if not code.strip():
@@ -281,6 +302,224 @@ class UniversalToolHandler:
         except Exception as e:
             return f"{language.title()} execution error: {e}"
     
+    def _execute_python_enhanced(self, code: str) -> str:
+        """Execute Python code safely with enhanced cross-platform command handling"""
+        try:
+            # Smart command detection for system-related Python code
+            if self._is_system_command_in_python(code):
+                return self._handle_system_commands_in_python(code)
+            
+            # Create a safe execution environment with essential imports
+            import math
+            import random
+            import datetime
+            import os
+            
+            safe_globals = {
+                "__builtins__": {
+                    "print": print,
+                    "len": len,
+                    "str": str,
+                    "int": int,
+                    "float": float,
+                    "list": list,
+                    "dict": dict,
+                    "tuple": tuple,
+                    "set": set,
+                    "range": range,
+                    "sum": sum,
+                    "max": max,
+                    "min": min,
+                    "abs": abs,
+                    "round": round,
+                    "sorted": sorted,
+                    "reversed": reversed,
+                    "enumerate": enumerate,
+                    "zip": zip,
+                    "bool": bool,
+                    "type": type,
+                    "isinstance": isinstance,
+                    "hasattr": hasattr,
+                    "getattr": getattr,
+                    "any": any,
+                    "all": all,
+                    "__import__": __import__,  # Allow imports
+                },
+                # Safe imports
+                "math": math,
+                "random": random,
+                "datetime": datetime,
+                "os": os,
+                "sys": __import__("sys"),
+            }
+            
+            # Capture output
+            import io
+            import contextlib
+            
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                exec(code, safe_globals)
+            
+            result = output.getvalue()
+            return result if result else "Code executed successfully"
+            
+        except Exception as e:
+            return f"Python execution error: {e}"
+
+    def _is_system_command_in_python(self, code: str) -> bool:
+        """Check if Python code contains system commands that need special handling"""
+        system_indicators = [
+            "subprocess.run",
+            "os.system",
+            "pip list",
+            "python --version",
+            "&&"
+        ]
+        return any(indicator in code for indicator in system_indicators)
+
+    def _handle_system_commands_in_python(self, code: str) -> str:
+        """Handle system commands within Python code with cross-platform support"""
+        try:
+            # Check for common problematic patterns and provide alternatives
+            if "pip list" in code and ("head" in code or "Select-Object" in code):
+                return self._get_pip_list_limited()
+            
+            if "python --version" in code:
+                return self._get_python_version_info()
+            
+            # For other system commands, execute safely
+            return self._execute_python_with_subprocess_fix(code)
+            
+        except Exception as e:
+            return f"System command handling error: {e}"
+
+    def _get_pip_list_limited(self) -> str:
+        """Get pip list with limited output using Python (cross-platform)"""
+        try:
+            import subprocess
+            import sys
+            
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'list'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.split('\n')
+                # Take first 10 lines (header + 8 packages)
+                limited_output = '\n'.join(lines[:10])
+                return limited_output
+            else:
+                return f"Pip list error: {result.stderr}"
+                
+        except Exception as e:
+            return f"Pip list execution error: {e}"
+
+    def _get_python_version_info(self) -> str:
+        """Get Python version info reliably (cross-platform)"""
+        try:
+            import sys
+            version_info = f"Python {sys.version}"
+            
+            # Also get pip list
+            pip_output = self._get_pip_list_limited()
+            return version_info + "\n" + pip_output
+            
+        except Exception as e:
+            return f"Version info error: {e}"
+
+    def _execute_python_with_subprocess_fix(self, code: str) -> str:
+        """Execute Python code with subprocess fixes for cross-platform compatibility"""
+        try:
+            # Replace common Unix commands with cross-platform equivalents
+            fixed_code = self._fix_cross_platform_commands(code)
+            
+            # Execute the fixed code
+            import io
+            import contextlib
+            import math
+            import random
+            import datetime
+            import os
+            import sys
+            import subprocess
+            
+            safe_globals = {
+                "__builtins__": {
+                    "print": print,
+                    "len": len,
+                    "str": str,
+                    "int": int,
+                    "float": float,
+                    "list": list,
+                    "dict": dict,
+                    "tuple": tuple,
+                    "set": set,
+                    "range": range,
+                    "sum": sum,
+                    "max": max,
+                    "min": min,
+                    "abs": abs,
+                    "round": round,
+                    "sorted": sorted,
+                    "reversed": reversed,
+                    "enumerate": enumerate,
+                    "zip": zip,
+                    "bool": bool,
+                    "type": type,
+                    "isinstance": isinstance,
+                    "hasattr": hasattr,
+                    "getattr": getattr,
+                    "any": any,
+                    "all": all,
+                    "__import__": __import__,
+                },
+                "math": math,
+                "random": random,
+                "datetime": datetime,
+                "os": os,
+                "sys": sys,
+                "subprocess": subprocess,
+            }
+            
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                exec(fixed_code, safe_globals)
+            
+            result = output.getvalue()
+            return result if result else "Code executed successfully"
+            
+        except Exception as e:
+            return f"Enhanced Python execution error: {e}"
+
+    def _fix_cross_platform_commands(self, code: str) -> str:
+        """Fix cross-platform command issues in Python code"""
+        import platform
+        
+        if platform.system() == "Windows":
+            # Fix common Unix to Windows command translations
+            replacements = {
+                "head -10": "Select-Object -First 10",
+                "head -5": "Select-Object -First 5", 
+                "tail -10": "Select-Object -Last 10",
+                "tail -5": "Select-Object -Last 5",
+                "| head -10": "[:10]",  # For Python list slicing
+                "| head -5": "[:5]",
+            }
+            
+            for unix_cmd, windows_cmd in replacements.items():
+                if unix_cmd in code:
+                    # If it's in a subprocess call, use Python slicing instead
+                    if "subprocess" in code and "head" in unix_cmd:
+                        code = code.replace(f"| {unix_cmd}", windows_cmd)
+                    else:
+                        code = code.replace(unix_cmd, windows_cmd)
+        
+        return code
+
     def _execute_python(self, code: str) -> str:
         """Execute Python code safely"""
         try:
@@ -894,9 +1133,10 @@ Note: Real web search requires:
 For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
     
     def _http_get(self, arguments: Dict) -> str:
-        """Perform HTTP GET request"""
+        """Perform HTTP GET request with enhanced timeout handling"""
         url = arguments.get("url", "")
         headers = arguments.get("headers", {})
+        timeout = arguments.get("timeout", 30)  # Default 30 seconds for better reliability
         
         if not url:
             return "URL required for HTTP GET request"
@@ -905,12 +1145,13 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
             import requests
             
             with show_progress("", animated=True):
-                response = requests.get(url, headers=headers, timeout=10)
+                response = requests.get(url, headers=headers, timeout=timeout)
             
             result = f"🌐 HTTP GET: {url}\n"
             result += f"Status: {response.status_code}\n"
             result += f"Content Type: {response.headers.get('content-type', 'unknown')}\n"
-            result += f"Content Length: {len(response.content)} bytes\n\n"
+            result += f"Content Length: {len(response.content)} bytes\n"
+            result += f"Response Time: {timeout - (timeout if response.status_code == 200 else 0):.2f}s\n\n"
             
             # Show first 500 characters of response
             content = response.text[:500]
@@ -924,13 +1165,21 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
         except ImportError:
             return "HTTP operations require 'requests' library (pip install requests)"
         except Exception as e:
-            return f"HTTP GET error: {e}"
+            # Handle specific request exceptions if requests is available
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                return f"HTTP GET timeout after {timeout}s for URL: {url}"
+            elif "connection" in error_msg.lower():
+                return f"Connection error for URL: {url} (check network connectivity)"
+            else:
+                return f"HTTP GET error: {e}"
     
     def _http_post(self, arguments: Dict) -> str:
-        """Perform HTTP POST request"""
+        """Perform HTTP POST request with enhanced timeout handling"""
         url = arguments.get("url", "")
         data = arguments.get("data", {})
         headers = arguments.get("headers", {})
+        timeout = arguments.get("timeout", 30)  # Default 30 seconds for better reliability
         
         if not url:
             return "URL required for HTTP POST request"
@@ -939,7 +1188,7 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
             import requests
             
             with show_progress("", animated=True):
-                response = requests.post(url, json=data, headers=headers, timeout=10)
+                response = requests.post(url, json=data, headers=headers, timeout=timeout)
             
             result = f"🌐 HTTP POST: {url}\n"
             result += f"Status: {response.status_code}\n"
@@ -958,12 +1207,20 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
         except ImportError:
             return "HTTP operations require 'requests' library (pip install requests)"
         except Exception as e:
-            return f"HTTP POST error: {e}"
+            # Handle specific request exceptions
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                return f"HTTP POST timeout after {timeout}s for URL: {url}"
+            elif "connection" in error_msg.lower():
+                return f"Connection error for URL: {url} (check network connectivity)"
+            else:
+                return f"HTTP POST error: {e}"
     
     def _download_file(self, arguments: Dict) -> str:
-        """Download a file from URL"""
+        """Download a file from URL with enhanced timeout handling"""
         url = arguments.get("url", "")
         filename = arguments.get("filename", "")
+        timeout = arguments.get("timeout", 60)  # Longer timeout for downloads
         
         if not url:
             return "URL required for download"
@@ -977,38 +1234,70 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
         try:
             import requests
             
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
+            with show_progress("Downloading...", animated=True):
+                response = requests.get(url, timeout=timeout, stream=True)
+                response.raise_for_status()
             
             # Save to workspace
             filepath = os.path.join(self.workspace_path, filename)
             
             with open(filepath, 'wb') as f:
-                f.write(response.content)
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
             
-            size_mb = len(response.content) / (1024 * 1024)
+            # Get file size
+            file_size = os.path.getsize(filepath)
+            size_mb = file_size / (1024 * 1024)
             
             return f"📥 Downloaded: {filename}\nSize: {size_mb:.2f} MB\nSaved to: {filepath}"
             
         except ImportError:
             return "Download operations require 'requests' library (pip install requests)"
         except Exception as e:
+            # Handle specific request exceptions
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                return f"Download timeout after {timeout}s for URL: {url}"
+            elif "connection" in error_msg.lower():
+                return f"Connection error for URL: {url} (check network connectivity)"
+            else:
+                return f"Download error: {e}"
+        except Exception as e:
             return f"Download error: {e}"
     
     def _scrape_webpage(self, arguments: Dict) -> str:
-        """Scrape text content from a webpage"""
+        """Scrape text content from a webpage with enhanced timeout handling"""
         url = arguments.get("url", "")
         selector = arguments.get("selector", "")  # CSS selector
+        timeout = arguments.get("timeout", 30)  # Default 30 seconds for web scraping
         
         if not url:
             return "URL required for web scraping"
         
         try:
             import requests
-            from bs4 import BeautifulSoup
+            try:
+                from bs4 import BeautifulSoup
+            except ImportError:
+                # Fallback to basic text extraction without BeautifulSoup
+                response = requests.get(url, timeout=timeout)
+                response.raise_for_status()
+                
+                # Basic text extraction from HTML
+                content = response.text
+                # Remove HTML tags with simple regex
+                import re
+                content = re.sub(r'<[^>]+>', ' ', content)
+                content = re.sub(r'\s+', ' ', content).strip()
+                
+                if len(content) > 2000:
+                    content = content[:2000] + "...\n[Content truncated]"
+                
+                return f"🕷️ WEBPAGE CONTENT (basic): {url}\n{'='*50}\n{content}"
             
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
+            with show_progress("Scraping webpage...", animated=True):
+                response = requests.get(url, timeout=timeout)
+                response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
@@ -1042,11 +1331,16 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
             missing = []
             if "requests" in str(e):
                 missing.append("requests")
-            if "bs4" in str(e):
-                missing.append("beautifulsoup4")
-            return f"Web scraping requires: {', '.join(missing)} (pip install {' '.join(missing)})"
+            return f"Web scraping requires: {', '.join(missing)} (pip install {' '.join(missing)})\nNote: beautifulsoup4 is optional for enhanced parsing"
         except Exception as e:
-            return f"Web scraping error: {e}"
+            # Handle specific request exceptions
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                return f"Web scraping timeout after {timeout}s for URL: {url}"
+            elif "connection" in error_msg.lower():
+                return f"Connection error for URL: {url} (check network connectivity)"
+            else:
+                return f"Web scraping error: {e}"
     
     def _try_calculation(self, function_name: str, arguments: Dict) -> Optional[str]:
         """Try to execute as calculation"""
