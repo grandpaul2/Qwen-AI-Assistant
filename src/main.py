@@ -13,7 +13,7 @@ from .config import APP_CONFIG, setup_logging, save_config, get_config_path, upd
 from .memory import memory
 from .file_manager import file_manager
 from .ollama.universal_interface import call_ollama_with_tools
-from .ollama.enhanced_interface import test_ollama_connection
+from .ollama.connection_test import test_ollama_connection
 from .utils import detect_linux_package_manager, generate_install_commands
 from .exceptions import (
     WorkspaceAIError, ConfigurationError, OllamaConnectionError,

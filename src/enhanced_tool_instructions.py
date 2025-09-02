@@ -6,7 +6,6 @@ the AI make better tool selection decisions with context awareness.
 """
 
 from typing import List, Dict, Any, Optional
-from .context_aware_selector import enhance_tool_selection_with_context
 
 def build_enhanced_tool_instruction() -> str:
     """
@@ -242,9 +241,32 @@ def get_context_aware_tool_recommendations(user_message: str, workspace_path: st
         Dictionary with enhanced recommendations and context
     """
     try:
-        return enhance_tool_selection_with_context(
-            workspace_path, user_message, available_tools, conversation_history
-        )
+        # Simple context analysis fallback
+        relevant_tools = []
+        for tool in available_tools:
+            tool_name = tool['function']['name'].lower()
+            if any(keyword in user_message.lower() for keyword in ['file', 'create', 'write']):
+                if 'file' in tool_name or 'create' in tool_name or 'write' in tool_name:
+                    relevant_tools.append(tool['function']['name'])
+            elif any(keyword in user_message.lower() for keyword in ['calculate', 'math', 'compute']):
+                if 'calculator' in tool_name or 'math' in tool_name:
+                    relevant_tools.append(tool['function']['name'])
+            elif any(keyword in user_message.lower() for keyword in ['code', 'python', 'execute']):
+                if 'code' in tool_name or 'interpreter' in tool_name:
+                    relevant_tools.append(tool['function']['name'])
+        
+        # Fallback to first few tools if no specific matches
+        if not relevant_tools:
+            relevant_tools = [tool['function']['name'] for tool in available_tools[:3]]
+            
+        return {
+            'recommended_tools': relevant_tools,
+            'context_analysis': {
+                'workspace_files': [],
+                'fallback': True
+            },
+            'execution_plan': []
+        }
     except Exception as e:
         # Fallback to basic recommendations if context analysis fails
         return {

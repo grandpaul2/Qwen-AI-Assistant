@@ -31,7 +31,11 @@ class UniversalToolHandler:
     
     def __init__(self, workspace_path: Optional[str] = None):
         """Initialize with workspace context"""
-        self.workspace_path = workspace_path or os.getcwd()
+        if workspace_path is None:
+            from .config import get_workspace_path
+            self.workspace_path = get_workspace_path()
+        else:
+            self.workspace_path = workspace_path
         self.file_manager = None
         self._load_file_manager()
     
@@ -1238,12 +1242,32 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
                 response = requests.get(url, timeout=timeout, stream=True)
                 response.raise_for_status()
             
-            # Save to workspace
-            filepath = os.path.join(self.workspace_path, filename)
-            
-            with open(filepath, 'wb') as f:
+            # Use file manager to save to secure workspace
+            if self.file_manager:
+                # Read content into memory first
+                content = b""
                 for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    content += chunk
+                
+                # Save using file manager (note: file_manager expects text, so we need to handle binary)
+                # For now, let's use the secure path resolution from file_manager
+                secure_path = self.file_manager._resolve(filename)
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(secure_path), exist_ok=True)
+                
+                with open(secure_path, 'wb') as f:
+                    f.write(content)
+                
+                filepath = secure_path
+            else:
+                # Fallback: use workspace path directly (still secure)
+                filepath = os.path.join(self.workspace_path, filename)
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
             
             # Get file size
             file_size = os.path.getsize(filepath)
@@ -1262,8 +1286,6 @@ For now, try using the 'fetch' or 'http_get' operations with specific URLs."""
                 return f"Connection error for URL: {url} (check network connectivity)"
             else:
                 return f"Download error: {e}"
-        except Exception as e:
-            return f"Download error: {e}"
     
     def _scrape_webpage(self, arguments: Dict) -> str:
         """Scrape text content from a webpage with enhanced timeout handling"""
