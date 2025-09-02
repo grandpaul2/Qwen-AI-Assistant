@@ -2,10 +2,11 @@
 Enhanced System Instructions for Improved Tool Selection
 
 This module provides improved system prompts and instructions to help
-the AI make better tool selection decisions.
+the AI make better tool selection decisions with context awareness.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from .context_aware_selector import enhance_tool_selection_with_context
 
 def build_enhanced_tool_instruction() -> str:
     """
@@ -224,3 +225,77 @@ def get_context_aware_tool_schemas() -> List[Dict[str, Any]]:
             }
         }
     ]
+
+def get_context_aware_tool_recommendations(user_message: str, workspace_path: str, 
+                                         available_tools: List[Dict], 
+                                         conversation_history: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Get context-aware tool recommendations for better selection.
+    
+    Args:
+        user_message: The user's request
+        workspace_path: Path to the current workspace
+        available_tools: List of available tool schemas
+        conversation_history: Previous conversation messages
+    
+    Returns:
+        Dictionary with enhanced recommendations and context
+    """
+    try:
+        return enhance_tool_selection_with_context(
+            workspace_path, user_message, available_tools, conversation_history
+        )
+    except Exception as e:
+        # Fallback to basic recommendations if context analysis fails
+        return {
+            'recommended_tools': [tool['function']['name'] for tool in available_tools[:3]],
+            'context_analysis': {
+                'error': str(e),
+                'fallback': True
+            },
+            'execution_plan': []
+        }
+
+def build_context_aware_instruction(user_message: str, workspace_path: str, 
+                                   available_tools: List[Dict]) -> str:
+    """
+    Build a context-aware instruction that includes specific tool recommendations.
+    """
+    # Get context-aware recommendations
+    recommendations = get_context_aware_tool_recommendations(
+        user_message, workspace_path, available_tools
+    )
+    
+    base_instruction = build_enhanced_tool_instruction()
+    
+    # Add context-specific guidance
+    context_guidance = f"""
+
+CONTEXT-AWARE GUIDANCE FOR THIS REQUEST:
+
+Based on analysis of your request "{user_message}" and the current workspace:
+
+Recommended Tools (in priority order):
+{', '.join(recommendations['recommended_tools'][:5])}
+
+Intent Analysis:
+- Primary Action: {recommendations['context_analysis'].get('intent', {}).get('primary_action', 'unknown')}
+- Complexity: {recommendations['context_analysis'].get('intent', {}).get('complexity', 'unknown')}
+- Domain: {recommendations['context_analysis'].get('intent', {}).get('domain', 'general')}
+
+Project Context:
+- Type: {recommendations['context_analysis'].get('project_context', {}).get('project_type', 'unknown')}
+- Languages: {', '.join(recommendations['context_analysis'].get('project_context', {}).get('languages', []))}
+
+Execution Plan:
+"""
+    
+    for step in recommendations.get('execution_plan', []):
+        context_guidance += f"  {step['step']}. {step['action'].title()}: {step['purpose']}\n"
+        context_guidance += f"     Suggested tools: {', '.join(step['tools'])}\n"
+    
+    context_guidance += """
+Use this analysis to guide your tool selection, but adapt based on the specific details of the request.
+"""
+    
+    return base_instruction + context_guidance

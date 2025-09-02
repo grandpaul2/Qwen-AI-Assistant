@@ -7,14 +7,15 @@ any tool it wants, and we'll attempt to execute it dynamically.
 
 import json
 import logging
+import os
 from typing import Dict, Any, Optional, List
 
 from .client import OllamaClient
 from ..universal_tool_handler import handle_any_tool_call
 from ..memory import memory
-from ..config import load_config
+from ..config import load_config, get_workspace_path
 from ..progress import show_progress
-from ..enhanced_tool_instructions import build_enhanced_tool_instruction, get_context_aware_tool_schemas
+from ..enhanced_tool_instructions import build_enhanced_tool_instruction, get_context_aware_tool_schemas, build_context_aware_instruction
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,17 @@ def _call_ollama_with_open_tools(prompt: str, model: Optional[str], verbose_outp
         # Build context messages
         context_messages = memory.get_context_messages()
         
-        # Create open-ended tool instruction
-        system_message = build_enhanced_tool_instruction()
+        # Define flexible tool schemas
+        open_tools = get_context_aware_tool_schemas()
+        
+        # Create context-aware tool instruction
+        workspace_path = os.getcwd()  # Current working directory as workspace
+        try:
+            system_message = build_context_aware_instruction(prompt, workspace_path, open_tools)
+        except Exception as e:
+            # Fallback to basic enhanced instruction if context analysis fails
+            logger.warning(f"Context analysis failed, using basic instruction: {e}")
+            system_message = build_enhanced_tool_instruction()
         
         if context_messages:
             context_messages.append({"role": "system", "content": system_message})

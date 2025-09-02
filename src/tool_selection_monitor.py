@@ -1,16 +1,20 @@
 """
-Tool Selection Monitor for WorkspaceAI
+Enhanced Tool Selection Monitor for WorkspaceAI
 
-Tracks tool usage patterns, success rates, and provides insights
-for improving tool selection accuracy.
+Tracks tool usage patterns, success rates, and provides real-time insights
+for improving tool selection accuracy with context awareness.
 """
 
 import json
 import os
 import time
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from collections import defaultdict, Counter
+from dataclasses import dataclass, asdict
+from pathlib import Path
+import threading
+from collections import defaultdict, Counter, Counter
 
 class ToolSelectionMonitor:
     """Monitor and analyze tool selection patterns"""
@@ -261,6 +265,128 @@ class ToolSelectionMonitor:
         print(f"\n💡 Recommendations:")
         for rec in analysis.get('recommendations', []):
             print(f"  • {rec}")
+
+@dataclass
+class ToolSelectionEvent:
+    """Represents a single tool selection and execution event."""
+    timestamp: float
+    user_request: str
+    recommended_tools: List[str]
+    actual_tools_used: List[str]
+    success: bool
+    execution_time: float
+    context_analysis: Dict[str, Any]
+    error_message: Optional[str] = None
+    user_satisfaction: Optional[int] = None  # 1-5 rating
+
+class RealTimeTracker:
+    """Real-time tracking for tool selection performance."""
+    
+    def __init__(self, storage_path: str = "WorkspaceAI/monitoring"):
+        self.storage_path = Path(storage_path)
+        self.storage_path.mkdir(parents=True, exist_ok=True)
+        
+        self.events_file = self.storage_path / "realtime_events.jsonl"
+        self._active_requests = {}
+        self._lock = threading.Lock()
+        
+    def start_request_tracking(self, request_id: str, user_request: str, 
+                             recommended_tools: List[str], context_analysis: Dict[str, Any]) -> None:
+        """Start tracking a new request."""
+        with self._lock:
+            self._active_requests[request_id] = {
+                'start_time': time.time(),
+                'user_request': user_request,
+                'recommended_tools': recommended_tools,
+                'context_analysis': context_analysis,
+                'actual_tools_used': []
+            }
+    
+    def record_tool_usage(self, request_id: str, tool_name: str, success: bool, 
+                         error_message: Optional[str] = None) -> None:
+        """Record that a tool was actually used."""
+        with self._lock:
+            if request_id in self._active_requests:
+                self._active_requests[request_id]['actual_tools_used'].append({
+                    'tool': tool_name,
+                    'success': success,
+                    'error': error_message
+                })
+    
+    def complete_request_tracking(self, request_id: str, overall_success: bool, 
+                                user_satisfaction: Optional[int] = None) -> Optional[ToolSelectionEvent]:
+        """Complete tracking for a request and return the event."""
+        with self._lock:
+            if request_id not in self._active_requests:
+                return None
+            
+            request_data = self._active_requests.pop(request_id)
+            
+            # Calculate metrics
+            execution_time = time.time() - request_data['start_time']
+            actual_tools = [item['tool'] for item in request_data['actual_tools_used']]
+            
+            # Create event
+            event = ToolSelectionEvent(
+                timestamp=time.time(),
+                user_request=request_data['user_request'],
+                recommended_tools=request_data['recommended_tools'],
+                actual_tools_used=actual_tools,
+                success=overall_success,
+                execution_time=execution_time,
+                context_analysis=request_data['context_analysis'],
+                error_message=None if overall_success else "Request failed",
+                user_satisfaction=user_satisfaction
+            )
+            
+            # Store event
+            self._store_event(event)
+            return event
+    
+    def _store_event(self, event: ToolSelectionEvent) -> None:
+        """Store an event to persistent storage."""
+        try:
+            # Convert event to dict and handle non-serializable objects
+            event_dict = asdict(event)
+            
+            # Convert sets to lists for JSON serialization
+            if 'context_analysis' in event_dict:
+                context = event_dict['context_analysis']
+                if 'project_context' in context:
+                    proj_ctx = context['project_context']
+                    for key, value in proj_ctx.items():
+                        if isinstance(value, set):
+                            proj_ctx[key] = list(value)
+            
+            with open(self.events_file, 'a') as f:
+                f.write(json.dumps(event_dict) + '\n')
+        except Exception as e:
+            print(f"Warning: Failed to store tracking event: {e}")
+
+# Global tracker instance
+_realtime_tracker = None
+
+def get_realtime_tracker() -> RealTimeTracker:
+    """Get the global real-time tracking instance."""
+    global _realtime_tracker
+    if _realtime_tracker is None:
+        _realtime_tracker = RealTimeTracker()
+    return _realtime_tracker
+
+def track_tool_selection(user_request: str, recommended_tools: List[str], 
+                        context_analysis: Dict[str, Any]) -> str:
+    """Start tracking a tool selection request. Returns request ID."""
+    request_id = str(uuid.uuid4())
+    get_realtime_tracker().start_request_tracking(request_id, user_request, recommended_tools, context_analysis)
+    return request_id
+
+def track_tool_usage(request_id: str, tool_name: str, success: bool, error: Optional[str] = None):
+    """Track that a tool was used."""
+    get_realtime_tracker().record_tool_usage(request_id, tool_name, success, error)
+
+def complete_tracking(request_id: str, success: bool, satisfaction: Optional[int] = None) -> Optional[ToolSelectionEvent]:
+    """Complete tracking for a request."""
+    return get_realtime_tracker().complete_request_tracking(request_id, success, satisfaction)
 
 
 # Global monitor instance
