@@ -14,6 +14,16 @@ class ConfigurationError(WorkspaceAIError):
     pass
 
 
+class ConfigFileError(ConfigurationError):
+    """Configuration file-related errors"""
+    pass
+
+
+class PackageManagerError(WorkspaceAIError):
+    """Package manager operation errors"""
+    pass
+
+
 class OllamaConnectionError(WorkspaceAIError):
     """Ollama connection errors"""
     pass

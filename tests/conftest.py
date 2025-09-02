@@ -21,10 +21,6 @@ from src.config import APP_CONFIG
 from src.file_manager import FileManager
 from src.memory import MemoryManager
 from src.ollama.client import OllamaClient
-from src.ollama.tool_executor import ToolExecutor
-from src.ollama.parameter_extractor import ParameterExtractor
-from src.ollama.function_validator import FunctionValidator
-from src.ollama.response_formatter import ResponseFormatter
 
 
 @pytest.fixture(scope="session")
@@ -48,10 +44,10 @@ def test_workspace() -> Generator[str, None, None]:
 @pytest.fixture
 def clean_workspace(test_workspace: str) -> Generator[str, None, None]:
     """
-    Provide a clean workspace for each test
+    Provide a clean workspace directory for each test
     
     Args:
-        test_workspace: Session-level workspace fixture
+        test_workspace: Base workspace path from session fixture
         
     Yields:
         Path to clean workspace directory
@@ -60,276 +56,173 @@ def clean_workspace(test_workspace: str) -> Generator[str, None, None]:
     if os.path.exists(test_workspace):
         for item in os.listdir(test_workspace):
             item_path = os.path.join(test_workspace, item)
-            if os.path.isdir(item_path):
+            if os.path.isfile(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
                 shutil.rmtree(item_path)
-            else:
-                os.remove(item_path)
     
     yield test_workspace
 
 
 @pytest.fixture
-def test_config() -> Dict[str, Any]:
+def temp_workspace() -> Generator[str, None, None]:
     """
-    Provide test configuration
+    Create a temporary workspace directory for a single test
+    
+    Yields:
+        Path to temporary workspace directory
+    """
+    temp_dir = tempfile.mkdtemp(prefix="workspaceai_temp_")
+    
+    yield temp_dir
+    
+    # Cleanup
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@pytest.fixture
+def sample_config() -> Dict[str, Any]:
+    """
+    Provide a sample configuration for testing
     
     Returns:
-        Test configuration dictionary
+        Sample configuration dictionary
     """
     return {
-        'model': 'test-model',
-        'safe_mode': True,
-        'ollama_host': 'localhost:11434',
-        'search_max_file_kb': 1024,
-        'verbose_output': False
+        "workspace_path": "/tmp/test_workspace",
+        "memory_path": "/tmp/test_memory", 
+        "safe_mode": True,
+        "auto_save": False,
+        "search": {
+            "max_file_size": 1024 * 1024,
+            "excluded_extensions": [".exe", ".bin"],
+            "case_sensitive": False
+        },
+        "ollama": {
+            "host": "localhost",
+            "port": 11434,
+            "model": "qwen2.5:3b",
+            "timeout": 30
+        }
     }
 
 
 @pytest.fixture
-def file_manager_instance(clean_workspace: str, test_config: Dict[str, Any]) -> FileManager:
+def mock_ollama_client():
     """
-    Create a FileManager instance with test workspace
-    
-    Args:
-        clean_workspace: Clean workspace fixture
-        test_config: Test configuration
-        
-    Returns:
-        FileManager instance configured for testing
-    """
-    config = test_config.copy()
-    
-    # Use a custom FileManager that uses our test workspace
-    class TestFileManager(FileManager):
-        def __init__(self, config, workspace_path):
-            super().__init__(config)
-            self.base_path = workspace_path
-    
-    return TestFileManager(config, clean_workspace)
-
-
-@pytest.fixture
-def memory_manager_instance(clean_workspace: str) -> MemoryManager:
-    """
-    Create a MemoryManager instance with test workspace
-    
-    Args:
-        clean_workspace: Clean workspace fixture
-        
-    Returns:
-        MemoryManager instance configured for testing
-    """
-    # Create a temporary memory file in the test workspace
-    memory_dir = os.path.join(clean_workspace, "memory")
-    os.makedirs(memory_dir, exist_ok=True)
-    
-    class TestMemoryManager(MemoryManager):
-        def __init__(self, memory_dir):
-            super().__init__()
-            self.memory_file = os.path.join(memory_dir, "memory.json")
-    
-    return TestMemoryManager(memory_dir)
-
-
-@pytest.fixture
-def mock_ollama_client() -> Mock:
-    """
-    Create a mock Ollama client for testing
+    Provide a mock Ollama client for testing
     
     Returns:
         Mock OllamaClient instance
     """
     mock_client = Mock(spec=OllamaClient)
-    mock_client.test_connection.return_value = True
-    mock_client.simple_chat.return_value = "Mock response"
     mock_client.chat_completion.return_value = {
         "message": {
-            "content": "Mock completion response",
-            "tool_calls": []
+            "content": "Test response",
+            "role": "assistant"
         }
     }
+    mock_client.simple_chat.return_value = "Test response"
+    mock_client.test_connection.return_value = True
     return mock_client
 
 
 @pytest.fixture
-def tool_executor_instance(mock_ollama_client: Mock) -> ToolExecutor:
+def file_manager_instance(temp_workspace: str, sample_config: Dict[str, Any]):
     """
-    Create a ToolExecutor instance with mock client
+    Provide a FileManager instance for testing
     
     Args:
-        mock_ollama_client: Mock Ollama client
+        temp_workspace: Temporary workspace path
+        sample_config: Sample configuration
         
     Returns:
-        ToolExecutor instance for testing
+        FileManager instance configured for testing
     """
-    return ToolExecutor(mock_ollama_client)
+    config = sample_config.copy()
+    config["workspace_path"] = temp_workspace
+    return FileManager(config)
 
 
 @pytest.fixture
-def parameter_extractor_instance() -> ParameterExtractor:
+def memory_manager_instance(temp_workspace: str, sample_config: Dict[str, Any]):
     """
-    Create a ParameterExtractor instance
-    
-    Returns:
-        ParameterExtractor instance for testing
-    """
-    return ParameterExtractor()
-
-
-@pytest.fixture
-def function_validator_instance() -> FunctionValidator:
-    """
-    Create a FunctionValidator instance
-    
-    Returns:
-        FunctionValidator instance for testing
-    """
-    return FunctionValidator()
-
-
-@pytest.fixture
-def response_formatter_instance() -> ResponseFormatter:
-    """
-    Create a ResponseFormatter instance
-    
-    Returns:
-        ResponseFormatter instance for testing
-    """
-    return ResponseFormatter()
-
-
-@pytest.fixture
-def sample_prompts() -> Dict[str, list[str]]:
-    """
-    Provide sample prompts for testing
-    
-    Returns:
-        Dictionary of sample prompts categorized by intent
-    """
-    return {
-        'content_creation': [
-            "create a file called notes.txt with my todo list",
-            "write me a Python script named hello.py",
-            "make a markdown file for documentation",
-            "save this as config.json",
-            "generate a CSV file with data"
-        ],
-        'file_management': [
-            "list all files in the directory",
-            "read the contents of readme.txt",
-            "copy notes.txt to backup.txt",
-            "delete old_file.txt",
-            "search for files containing 'project'"
-        ],
-        'software_installation': [
-            "install Python",
-            "how to install Git on Windows",
-            "setup VS Code",
-            "install commands for Docker",
-            "get Node.js installation steps"
-        ],
-        'unclear': [
-            "what's the weather?",
-            "hello",
-            "how are you?",
-            "tell me a joke",
-            "what time is it?"
-        ]
-    }
-
-
-@pytest.fixture
-def mock_ollama_responses() -> Dict[str, Dict[str, Any]]:
-    """
-    Provide mock Ollama API responses
-    
-    Returns:
-        Dictionary of mock responses for different scenarios
-    """
-    return {
-        'simple_chat': {
-            "message": {
-                "content": "This is a simple chat response"
-            }
-        },
-        'tool_call_create_file': {
-            "message": {
-                "content": "I'll create that file for you.",
-                "tool_calls": [{
-                    "function": {
-                        "name": "create_file",
-                        "arguments": {
-                            "file_name": "test.txt",
-                            "content": "Test content"
-                        }
-                    }
-                }]
-            }
-        },
-        'tool_call_list_files': {
-            "message": {
-                "content": "Here are the files:",
-                "tool_calls": [{
-                    "function": {
-                        "name": "list_files",
-                        "arguments": {}
-                    }
-                }]
-            }
-        },
-        'error_response': {
-            "error": "Model not found"
-        }
-    }
-
-
-@pytest.fixture
-def sample_files(clean_workspace: str) -> Dict[str, str]:
-    """
-    Create sample files in the test workspace
+    Provide a MemoryManager instance for testing
     
     Args:
-        clean_workspace: Clean workspace fixture
+        temp_workspace: Temporary workspace path
+        sample_config: Sample configuration
         
     Returns:
-        Dictionary mapping filenames to their content
+        MemoryManager instance configured for testing
     """
-    files = {
-        'sample.txt': 'This is a sample text file for testing.',
-        'data.json': '{"key": "value", "number": 42}',
-        'readme.md': '# Test README\n\nThis is a test markdown file.',
-        'script.py': 'print("Hello, World!")\n# This is a test Python script',
-        'config.ini': '[section]\nkey=value\nanother_key=another_value'
-    }
-    
-    for filename, content in files.items():
-        filepath = os.path.join(clean_workspace, filename)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-    
-    return files
+    config = sample_config.copy()
+    config["memory_path"] = os.path.join(temp_workspace, "memory")
+    config["auto_save"] = False  # Disable auto-save for tests
+    return MemoryManager(config)
 
 
+# Common test utilities
+def create_test_file(workspace_path: str, filename: str, content: str = "test content") -> str:
+    """
+    Create a test file in the workspace
+    
+    Args:
+        workspace_path: Path to workspace
+        filename: Name of file to create
+        content: Content to write to file
+        
+    Returns:
+        Full path to created file
+    """
+    file_path = os.path.join(workspace_path, filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return file_path
+
+
+def create_test_directory(workspace_path: str, dirname: str) -> str:
+    """
+    Create a test directory in the workspace
+    
+    Args:
+        workspace_path: Path to workspace
+        dirname: Name of directory to create
+        
+    Returns:
+        Full path to created directory
+    """
+    dir_path = os.path.join(workspace_path, dirname)
+    os.makedirs(dir_path, exist_ok=True)
+    return dir_path
+
+
+@pytest.fixture
+def temp_files_workspace(temp_workspace: str) -> str:
+    """
+    Create a workspace with some test files
+    
+    Args:
+        temp_workspace: Temporary workspace path
+        
+    Returns:
+        Path to workspace with test files
+    """
+    # Create some test files
+    create_test_file(temp_workspace, "test1.txt", "Hello World")
+    create_test_file(temp_workspace, "test2.py", "print('Hello Python')")
+    create_test_file(temp_workspace, "subdir/test3.md", "# Test Markdown")
+    create_test_file(temp_workspace, "data.json", '{"key": "value"}')
+    
+    return temp_workspace
+
+
+# Disable warnings for tests
 @pytest.fixture(autouse=True)
-def reset_global_state():
+def disable_warnings():
     """
-    Reset global state before each test
-    
-    This fixture automatically runs before each test to ensure
-    clean state and prevent test interference.
+    Disable warnings during test execution
     """
-    # Reset any global variables or singletons here
-    yield
-    # Cleanup after test if needed
-
-
-# Test markers are configured in pytest_configure function below
-
-
-def pytest_configure(config):
-    """Configure pytest with custom markers"""
-    config.addinivalue_line("markers", "unit: Unit tests")
-    config.addinivalue_line("markers", "integration: Integration tests")  
-    config.addinivalue_line("markers", "security: Security tests")
-    config.addinivalue_line("markers", "performance: Performance tests")
-    config.addinivalue_line("markers", "slow: Slow running tests")
+    import warnings
+    warnings.filterwarnings("ignore")

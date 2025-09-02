@@ -14,7 +14,7 @@ from .memory import memory
 from .file_manager import file_manager
 from .ollama.universal_interface import call_ollama_with_tools
 from .ollama.connection_test import test_ollama_connection
-from .utils import detect_linux_package_manager, generate_install_commands
+# from .utils import detect_linux_package_manager, generate_install_commands  # Temporarily disabled due to syntax errors
 from .exceptions import (
     WorkspaceAIError, ConfigurationError, OllamaConnectionError,
     handle_exception, log_and_raise
@@ -240,7 +240,8 @@ def interactive_mode_with_exceptions():
         # Show detected package manager on Linux with error handling
         if platform.system() == "Linux":
             try:
-                detected_pm = detect_linux_package_manager()
+                # detected_pm = detect_linux_package_manager()  # Temporarily disabled
+                detected_pm = None
                 print(f"Package manager: {detected_pm if detected_pm else 'Not detected'}")
             except Exception as e:
                 logging.warning(f"Package manager detection failed: {e}")
