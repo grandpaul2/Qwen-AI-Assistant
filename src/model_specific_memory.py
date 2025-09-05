@@ -218,8 +218,8 @@ class ModelSpecificMemory:
     
     def _create_new_memory(self, model: str) -> dict:
         """Create new memory structure for a model"""
-        memory = self.memory_template.copy()
-        memory["metadata"] = memory["metadata"].copy()
+        import copy
+        memory = copy.deepcopy(self.memory_template)
         memory["metadata"]["model"] = model
         memory["metadata"]["created_at"] = datetime.now().isoformat()
         memory["metadata"]["last_modified"] = datetime.now().isoformat()
@@ -267,6 +267,12 @@ class ModelSpecificMemory:
         """
         try:
             memory = self.load_memory(model)
+            
+            # Estimate tokens if not provided (rough estimation)
+            if user_tokens is None:
+                user_tokens = max(1, len(user_content) // 4)  # Simple fallback estimation
+            if assistant_tokens is None:
+                assistant_tokens = max(1, len(assistant_content) // 4)  # Simple fallback estimation
             
             exchange = {
                 "timestamp": datetime.now().isoformat(),

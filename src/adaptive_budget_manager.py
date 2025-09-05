@@ -58,38 +58,41 @@ class AdaptiveBudgetManager:
         """Initialize budget manager with default parameters"""
         
         # Base budget allocations (percentages)
+        # Design: Chat mode 60→80%, Tools mode 80→90% total utilization
         self.base_budgets = {
             InteractionMode.TOOLS: {
                 'system_prompt': 3.0,
                 'tool_definitions': 6.0,
-                'conversation_memory': 60.0,
-                'response_generation': 15.0,  # Minimum, can expand
+                'conversation_memory': 50.0,     # Will adapt 45-55%
+                'response_generation': 16.0,     # Will adapt 16-26% 
                 'safety_margin': 5.0,
-                'reserved': 11.0  # Available for adaptive allocation
+                'reserved': 0.0  # No reserved - tight budgets by design
             },
             InteractionMode.CHAT: {
                 'system_prompt': 0.6,
                 'tool_definitions': 0.0,
-                'conversation_memory': 80.0,
-                'response_generation': 15.0,  # Minimum, can expand
+                'conversation_memory': 42.0,     # Will adapt 38-50%
+                'response_generation': 12.0,     # Will adapt 12-22%
                 'safety_margin': 5.0,
-                'reserved': 4.4  # Available for adaptive allocation
+                'reserved': 0.4  # Small buffer
             }
         }
         
-        # Adaptive allocation ranges
+        # Adaptive allocation ranges - designed for total utilization targets
         self.adaptive_ranges = {
             InteractionMode.TOOLS: {
-                'response_min': 15.0,
-                'response_max': 35.0,
-                'memory_min': 55.0,
-                'memory_max': 60.0
+                # Total target: 80% simple → 90% complex (14% + 45-55% + 16-26% = 75-95%)
+                'response_min': 16.0,    # Simple requests
+                'response_max': 26.0,    # Complex requests (+10%)
+                'memory_min': 45.0,      # Complex requests (less memory)
+                'memory_max': 55.0       # Simple requests (more memory)
             },
             InteractionMode.CHAT: {
-                'response_min': 15.0,
-                'response_max': 25.0,
-                'memory_min': 77.0,
-                'memory_max': 80.0
+                # Total target: 60% simple → 80% complex (5.6% + 38-50% + 12-22% = 55.6-77.6%)
+                'response_min': 12.0,    # Simple requests  
+                'response_max': 22.0,    # Complex requests (+10%)
+                'memory_min': 38.0,      # Complex requests (less memory)
+                'memory_max': 50.0       # Simple requests (more memory)
             }
         }
     
@@ -249,13 +252,8 @@ class AdaptiveBudgetManager:
         base_budgets['response_generation'] = adaptive_response
         base_budgets['conversation_memory'] = adaptive_memory
         
-        # Adjust reserved space
-        total_fixed = (base_budgets['system_prompt'] + 
-                      base_budgets['tool_definitions'] + 
-                      base_budgets['safety_margin'])
-        
-        remaining_for_reserved = 100.0 - total_fixed - adaptive_response - adaptive_memory
-        base_budgets['reserved'] = max(2.0, remaining_for_reserved)
+        # Reserved space stays as configured (no auto-adjustment to force 100%)
+        # This allows controlled utilization with headroom as intended
         
         # Convert percentages to absolute tokens
         absolute_budgets = {}

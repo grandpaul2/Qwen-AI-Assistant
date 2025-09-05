@@ -455,9 +455,17 @@ class SafetyValidator:
         """
         result = ValidationResult(component="migration_integrity")
         
-        # Count original exchanges
-        original_exchanges = old_data.get("current_conversation", [])
-        original_count = len(original_exchanges)
+        # Count original exchanges from all sources
+        original_count = 0
+        
+        # Count from current conversation
+        current_conv = old_data.get("current_conversation", [])
+        original_count += len(current_conv)
+        
+        # Count from recent conversations  
+        recent_convs = old_data.get("recent_conversations", [])
+        for conversation in recent_convs:
+            original_count += len(conversation)
         
         # Count migrated exchanges
         migrated_count = 0
