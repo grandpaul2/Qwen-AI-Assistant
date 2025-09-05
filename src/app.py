@@ -261,15 +261,6 @@ def interactive_mode_with_exceptions():
         print(f"Memory: {len(memory.recent_conversations)} recent + {len(memory.summarized_conversations)} summarized")
         print("Workspace: \\WorkspaceAI\\workspace")
         
-        # Show detected package manager on Linux with error handling
-        if platform.system() == "Linux":
-            try:
-                detected_pm = detect_linux_package_manager()
-                print(f"Package manager: {detected_pm if detected_pm else 'Not detected'}")
-            except Exception as e:
-                logger.error("Package manager detection failed")
-                print("Package manager: Detection failed")
-
         if memory.recent_conversations or memory.summarized_conversations:
             print("Continuing from previous conversations...")
 
@@ -277,7 +268,7 @@ def interactive_mode_with_exceptions():
 
         print("t: to use tools")
         print("\n- /new        Start new conversation")
-        print("- /tools      List available tools")
+        print("- /tools      List common tools")
         print("- /memory     Show memory status")
         print("- /config     Configure settings")
         print("- /reset      Clear all memory")
@@ -469,11 +460,9 @@ def interactive_mode_with_exceptions():
                     print("Please specify software to install after 'install:'")
                     
             else:
-                # Default behavior: use tool detection to determine if tools are needed
+                # Default behavior: chat mode only (no tools)
                 try:
-                    use_tools = detect_file_intent(prompt)
-                    logger.info(f"Tool detection: '{prompt[:50]}...' -> use_tools={use_tools}")
-                    call_ollama_with_tools(prompt, use_tools=use_tools)
+                    call_ollama_with_tools(prompt, use_tools=False)
                     print()  # Add blank line after bot response
                 except Exception as e:
                     converted_error = handle_exception("chat_mode", e)

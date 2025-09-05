@@ -36,6 +36,38 @@ class OllamaClient:
         self.timeout = CONSTANTS['API_TIMEOUT']
         self.max_retries = CONSTANTS['API_MAX_RETRIES']
         
+    def get_running_models(self) -> List[str]:
+        """Get list of currently running models"""
+        try:
+            response = requests.get(f"{self.base_url}/api/ps", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                models = data.get("models", [])
+                return [model.get("name", "") for model in models if model.get("name")]
+            return []
+        except Exception as e:
+            logger.debug(f"Could not get running models: {e}")
+            return []
+    
+    def check_and_use_running_model(self) -> bool:
+        """
+        Check if any models are already running and use one if available.
+        Returns True if switched to a running model, False otherwise.
+        """
+        try:
+            running_models = self.get_running_models()
+            if running_models:
+                # Use the first running model
+                running_model = running_models[0]
+                logger.info(f"Found running model: {running_model}, using it instead of {self.model}")
+                print(f"🔄 Using already running model: {running_model}")
+                self.model = running_model
+                return True
+            return False
+        except Exception as e:
+            logger.debug(f"Error checking running models: {e}")
+            return False
+        
     def verify_connection(self) -> Dict[str, Any]:
         """
         Verify connection to Ollama server and return detailed status.
@@ -90,8 +122,13 @@ class OllamaClient:
             raise converted_error
         
     def test_connection(self) -> bool:
-        """Test connection to Ollama server"""
+        """Test connection to Ollama server and check for running models"""
         try:
+            # First, check if any models are already running and use one if available
+            if self.check_and_use_running_model():
+                return True
+            
+            # If no models are running, proceed with normal connection test
             response = requests.get(f"{self.base_url}/api/tags", timeout=5)
             if response.status_code == 200:
                 models = response.json().get("models", [])
