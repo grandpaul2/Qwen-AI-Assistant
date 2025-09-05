@@ -318,5 +318,14 @@ class MemoryManager:
         self.save_memory()
 
 
-# Global memory manager instance
+# Global memory manager instance  
 memory = MemoryManager()
+
+# Unified memory interface (Session 3 integration)
+try:
+    from .memory_integration import UnifiedMemoryInterface
+    unified_memory = UnifiedMemoryInterface()
+    logging.info("New unified memory system available")
+except Exception as e:
+    logging.warning(f"Could not initialize unified memory system: {e}")
+    unified_memory = None

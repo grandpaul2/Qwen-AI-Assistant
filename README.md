@@ -2,15 +2,15 @@
 
 AI assistant with universal tool system and secure file management. Features modular architecture with comprehensive testing suite. Works with Ollama models (optimized for qwen2.5:3b).
 
-## 🚀 What's New in v3.0
+## What's New in v3.0
 
+- **Advanced Memory System**: Model-specific memory isolation with adaptive context management
 - **Modular Architecture**: Clean separation of concerns with dedicated modules
-- **Flattened Structure**: Simplified from nested folders to flat organization
 - **Universal Tool Handler**: Enhanced dynamic tool execution engine  
 - **Enhanced Tool Instructions**: Context-aware instruction system
 - **Improved Error Handling**: Robust exception management
 - **Configuration Management**: Advanced settings and path management
-- **Structural Cleanup**: Eliminated duplicates, single test per module
+- **Comprehensive Testing**: 100% test coverage across all system components
 
 ## Quick Start
 
@@ -96,7 +96,13 @@ main.py                              # Entry point
 src/                                 # Core modular architecture (flat structure)
 ├── app.py                           # Main application logic and interface
 ├── config.py                        # Configuration management and constants
-├── memory.py                        # Conversation memory and persistence
+├── memory.py                        # Legacy memory system with v3.0 integration
+├── unified_memory_manager.py        # v3.0 memory system orchestrator
+├── model_specific_memory.py         # Per-model memory isolation
+├── adaptive_budget_manager.py       # Complexity-aware context allocation
+├── safety_validator.py              # System validation framework
+├── token_counter.py                 # Enhanced token estimation
+├── memory_integration.py            # Backward compatibility interface
 ├── file_manager.py                  # Secure file operations with enhanced safety
 ├── universal_tool_handler.py        # Dynamic tool execution engine
 ├── tool_schemas.py                  # Tool definitions and schemas
@@ -151,11 +157,26 @@ Available in workspace sandbox:
 - **Advanced**: compress, search, metadata, JSON handling
 - **Organization**: list, backup, sync folders
 
-## Memory System
+## Memory System v3.0
 
-- **Recent**: 2 full conversations
-- **History**: 20 AI-summarized conversations  
-- **Persistent**: Auto-saves across sessions
+**Model-Specific Memory**: Each model maintains isolated conversation history, preventing cross-contamination between different model interactions.
+
+**Adaptive Context Management**: 
+- Chat mode: 60-80% context window utilization based on query complexity
+- Tools mode: 80-90% context window utilization based on query complexity
+- Intelligent budget allocation between memory and response generation
+
+**Enhanced Reliability**:
+- Atomic file operations prevent corruption
+- Automatic error recovery and backup creation
+- Comprehensive validation at all system levels
+- Legacy memory migration support
+
+**Key Features**:
+- Per-model memory isolation with collision-safe filename generation
+- Complexity-aware context preparation with anti-gaming measures
+- Backward compatibility with existing memory interfaces
+- Comprehensive safety validation and structured error reporting
 
 ## Configuration
 

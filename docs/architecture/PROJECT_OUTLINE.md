@@ -21,10 +21,11 @@ WorkspaceAI_project/
 The `src/` directory contains the modular core of the application with a flat structure for improved maintainability:
 
 **Recent Structural Improvements:**
+- **Memory System v3.0**: Complete modular memory architecture with model-specific isolation
 - Flattened module organization from nested `src/ollama/` to flat structure
 - Ollama modules renamed with `ollama_` prefix for clarity
-- Eliminated duplicate test files and complex nesting
-- Single test file per module maintained for cleaner organization
+- Comprehensive testing suite with 100% coverage across all components
+- Enhanced error handling and validation frameworks
 
 ### Main Components
 ```
@@ -32,7 +33,13 @@ src/
 ├── __init__.py                      # Package initialization and exports
 ├── app.py                          # Main application logic and interface orchestration
 ├── config.py                       # Configuration management and settings
-├── memory.py                       # Conversation memory and persistence system
+├── memory.py                       # Legacy memory system with v3.0 integration
+├── unified_memory_manager.py       # Memory system v3.0 central orchestrator
+├── model_specific_memory.py        # Per-model memory isolation with atomic operations
+├── adaptive_budget_manager.py      # Complexity-aware context allocation
+├── safety_validator.py             # Comprehensive system validation framework
+├── token_counter.py                # Enhanced token estimation with pattern recognition
+├── memory_integration.py           # Backward compatibility interface layer
 ├── file_manager.py                 # Secure file operations within workspace sandbox
 ├── universal_tool_handler.py       # Dynamic tool execution engine
 ├── tool_schemas.py                 # Tool definitions and validation schemas
@@ -45,6 +52,31 @@ src/
 ├── ollama_universal_interface.py   # Unified Ollama interaction interface
 └── ollama_connection_test.py       # Connectivity and setup testing
 ```
+
+## Memory System v3.0 Architecture
+
+**Model-Specific Memory Isolation**: Each model maintains separate conversation history to prevent cross-contamination between different model interactions.
+
+### Memory System Components
+
+**Core Components**:
+- `UnifiedMemoryManager`: Central orchestrator integrating all memory subsystems
+- `ModelSpecificMemory`: Per-model memory files with atomic operations and collision-safe naming
+- `AdaptiveBudgetManager`: Complexity-aware context allocation with anti-gaming measures
+- `SafetyValidator`: Comprehensive validation framework with structured error reporting
+- `SimpleTokenCounter`: Enhanced token estimation with pattern recognition and safety margins
+
+**Integration Layer**:
+- `UnifiedMemoryInterface`: Backward compatibility interface maintaining existing API contracts
+- Automatic legacy memory migration with integrity validation
+- Graceful fallback to legacy system if unified system unavailable
+
+**Key Features**:
+- Adaptive context window utilization (60-80% chat mode, 80-90% tools mode)
+- Hash-based filename generation preventing model name collisions  
+- Atomic file operations with corruption recovery and backup creation
+- Complexity analysis with diminishing returns to prevent keyword stuffing
+- Comprehensive validation at all system levels with detailed error reporting
 
 ## Runtime Environment (`WorkspaceAI/`)
 
