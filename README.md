@@ -1,16 +1,22 @@
 # WorkspaceAI v3.0 - Modular Architecture
 
-AI assistant with universal tool system and secure file management. Features modular architecture with comprehensive testing suite. Works with Ollama models (optimized for qwen2.5:3b).
+⚠️ **DEVELOPMENT NOTICE**: This project is currently on hold due to complexity issues with tool integration. While the core memory system is highly advanced and functional, the universal tool calling system requires significant refactoring.
 
-## What's New in v3.0
+**Current Status**: 
+- ✅ Advanced memory system (fully functional)
+- ✅ Multi-model support with adaptive context management  
+- ❌ Universal tool integration (development issues - context contamination)
+- ❌ Real-time tool execution (on hold)
+
+We are focusing development efforts on a streamlined version called "MemoryAI" that concentrates solely on the memory system without tool complexity.
+
+## What's Working in v3.0
 
 - **Memory System**: Model-specific memory isolation with adaptive context management
 - **Modular Architecture**: Separation of concerns with dedicated modules
-- **Universal Tool Handler**: Dynamic tool execution engine  
-- **Tool Instructions**: Context-aware instruction system
 - **Error Handling**: Exception management framework
 - **Configuration Management**: Settings and path management
-- **Testing**: Test coverage across system components
+- **Testing**: Test coverage across memory system components
 
 ## Quick Start
 

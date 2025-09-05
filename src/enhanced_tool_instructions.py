@@ -118,7 +118,7 @@ def get_context_aware_tool_schemas() -> List[Dict[str, Any]]:
                         },
                         "path": {
                             "type": "string",
-                            "description": "File or directory path (required for all operations)"
+                            "description": "File or directory path relative to workspace (required for all operations). Use simple filenames like 'test.txt' or relative paths like 'folder/file.txt'. Do not use absolute paths."
                         },
                         "content": {
                             "type": "string",
